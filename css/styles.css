@@ -1,0 +1,158 @@
+/* Customizações globais */
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.form-input {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    color: #1e293b;
+    font-size: 0.875rem;
+}
+
+.form-input:focus {
+    border-color: #3b82f6;
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 2px #bfdbfe;
+}
+
+.btn-primary,
+.btn-secondary {
+    border-radius: 0.5rem;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.btn-secondary {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #334155;
+}
+
+.btn-secondary:hover {
+    background: #f1f5f9;
+}
+
+/* Estilo dos Botões de Aba */
+.tab-btn {
+    color: #cbd5e1;
+}
+
+.tab-btn:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.tab-btn.active-tab {
+    background-color: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Canvas de Assinatura */
+.signature-canvas {
+    border: 1px dashed #cbd5e1;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+/* Folha A4 para Impressão */
+.page-a4 {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 210mm;
+    min-height: 297mm;
+    padding: 15mm;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.signature-preview {
+    width: 100%;
+    max-width: 180px;
+    height: 48px;
+    object-fit: contain;
+    margin-top: -3rem;
+    margin-bottom: 0.5rem;
+}
+
+.budget-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 5rem 7rem auto;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+@media (max-width: 640px) {
+    .budget-row {
+        grid-template-columns: minmax(0, 1fr) 4rem 6rem auto;
+    }
+}
+
+/* Regras de Impressão (Print) */
+@media print {
+    body {
+        background: white !important;
+        color: black !important;
+    }
+
+    body * {
+        visibility: hidden !important;
+    }
+
+    #printable-sheet,
+    #printable-sheet * {
+        visibility: visible !important;
+    }
+
+    #printable-sheet {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+    }
+
+    .print\:hidden, header, nav, #auth-screen, .btn-action {
+        display: none !important;
+    }
+
+    .page-a4 {
+        width: 100% !important;
+        min-height: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+    }
+
+    #printable-sheet {
+        border: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    @page {
+        size: A4;
+        margin: 10mm;
+    }
+}

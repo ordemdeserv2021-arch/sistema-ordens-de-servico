@@ -1,24 +1,55 @@
-# Sincronização das ordens entre aparelhos
+# Configuração do Neon Auth
 
-O aplicativo continua salvando uma cópia local e sincroniza o histórico com Supabase quando há conexão. A sincronização é por conta: entre no computador e no celular com o mesmo e-mail e senha para ver as mesmas ordens. Contas diferentes não compartilham ordens.
+O login usa o Managed Better Auth do Neon. A senha do banco nunca é enviada
+para o navegador; somente a URL pública do serviço de autenticação é usada no
+cliente.
 
-## Configurar o Supabase
+## Configurar o Neon Auth
 
-1. Crie um projeto em [supabase.com](https://supabase.com/).
-2. Abra o **SQL Editor**, cole o conteúdo de [`supabase_setup.sql`](./supabase_setup.sql) e execute. A tabela habilita Row Level Security; cada conta só pode ler, criar, editar ou excluir as próprias ordens.
-3. No painel do Supabase, deixe a autenticação por e-mail habilitada. Com confirmação de e-mail ativa, confirme a mensagem recebida ao criar a conta antes de entrar.
-4. Em **Project Settings → API**, copie a **Project URL** e a chave pública **anon** ou **publishable**. Nunca use nem publique a chave `service_role`.
-5. Abra o sistema em cada aparelho, informe a URL e a chave pública e escolha **Salvar conexão**. Depois, crie uma conta e use a mesma conta nos outros aparelhos.
+1. No console do Neon, abra o projeto e a ramificação usada pela aplicação.
+2. Em **Better Auth**, clique em **Enable Auth** e conclua a configuração.
+3. Na aba **Configuration**, copie a **Auth Base URL**.
+4. Configure a **Auth Base URL** uma única vez como `DEFAULT_NEON_AUTH_URL` em
+   `api/js/config.js` antes de publicar. A URL é pública e não é a senha nem a
+   string de conexão do banco. Uma URL já salva no navegador continua sendo
+   aceita durante esta transição.
+5. Em **Settings → Better Auth**, habilite **Sign-up with Email** e **Verify at
+   Sign-up**, escolhendo a confirmação por código. O provedor compartilhado
+   envia um código OTP; a aplicação permite solicitá-lo novamente e digitá-lo
+   para verificar o e-mail.
+6. Para testar localmente, acesse o Live Server pelo endereço `localhost`
+   (por exemplo, `http://localhost:5500/index.html`), não por `127.0.0.1`.
+   Verifique também se o acesso local está habilitado no Neon Auth. Para
+   produção, adicione o domínio publicado em **Console → Auth → Configuration
+   → Domains**.
+7. Cada colaborador pode usar **Criar Conta** com seu próprio e-mail e senha
+   (mínimo de 8 caracteres). O cadastro mostra a confirmação para verificar a
+   caixa de entrada e o spam. O sistema só libera a tela principal quando o
+   Neon Auth informa que o e-mail foi confirmado.
 
-No primeiro acesso da primeira conta em um aparelho que já tenha ordens salvas localmente, o aplicativo envia para a nuvem as ordens que ainda não existem nessa conta. Se já existir uma ordem com o mesmo número na nuvem, a versão da nuvem é mantida. A cópia local fica separada por conta neste aparelho. O sistema também oferece exportação JSON como cópia de segurança.
+O cliente é carregado pelo módulo `@neondatabase/neon-js` via CDN. O navegador
+precisa de acesso à internet e o domínio da aplicação deve estar autorizado na
+configuração do Neon Auth. Códigos de verificação expiram; solicite um código
+novo caso o anterior não funcione. Se o envio falhar, confira no Neon se a
+verificação de e-mail está habilitada e se o provedor de e-mail está ativo.
 
-## Hospedagem
+## Variáveis da Vercel
 
-O projeto continua sendo uma página estática e pode ser publicado na Vercel. A URL e a chave pública são configuradas no próprio navegador; portanto, não é necessário inserir uma chave secreta nas configurações da Vercel. A biblioteca Supabase é carregada por CDN, então o navegador precisa de acesso à internet.
+O frontend desta aplicação é uma página estática, portanto a `DATABASE_URL`
+deve permanecer somente nas variáveis da Vercel para as funções em `api/`.
+Nunca coloque a senha ou a string de conexão do Neon em `index.html`,
+`config.js` ou em qualquer arquivo enviado ao navegador.
 
-## Limites da sincronização
+## Ordens de serviço
 
-- Ordens e fotos anexadas à OS são sincronizadas como dados da ordem.
-- Modelos de equipamento, chave do Gemini e pastas locais/Drive permanecem específicos de cada aparelho.
-- O app sincroniza ao entrar, salvar, excluir ou importar ordens. Alterações e exclusões feitas sem conexão ficam em uma fila local por conta e são reenviadas na próxima sincronização.
-- O banco é separado por usuário autenticado. Para várias contas compartilharem o mesmo conjunto de ordens, é necessário adicionar organizações/equipes e permissões próprias.
+Nesta etapa, o formulário salva rascunhos no armazenamento local do navegador,
+separados pelo usuário autenticado. Eles ainda não são sincronizados entre
+dispositivos. A numeração da O.S. permanece reservada para configuração pelo
+usuário master da empresa.
+
+O endpoint `api/orders.js` permanece temporariamente desativado. Antes de
+habilitá-lo, valide a sessão do usuário no backend e restrinja a leitura/escrita
+aos dados autorizados. Não envie a `DATABASE_URL` ao frontend.
+
+O arquivo `supabase_setup.sql` é legado e não deve ser executado no Neon, pois
+ele usa as tabelas e as políticas específicas do Supabase.
