@@ -120,6 +120,9 @@ create index if not exists service_orders_creator_idx
 alter table public.service_orders add column if not exists os_number text
     check (os_number is null or length(os_number) between 1 and 30);
 
+alter table public.companies add column if not exists os_next_number bigint
+    check (os_next_number is null or os_next_number >= 0);
+
 create unique index if not exists service_orders_company_os_number_idx
     on public.service_orders (company_id, os_number) where os_number is not null;
 

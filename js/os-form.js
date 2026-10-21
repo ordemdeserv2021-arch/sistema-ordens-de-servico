@@ -250,11 +250,19 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
 
     async function syncOrder(order) {
         try {
-            await apiRequest('/api/orders', {
+            const result = await apiRequest('/api/orders', {
                 method: 'POST',
                 body: { id: order.id, data: order.data }
             });
             syncedOrderIds.add(order.id);
+            const assigned = result?.order?.osNumber;
+            if (assigned && assigned !== order.osNumber) {
+                order.osNumber = assigned;
+                orders = orders.map(item => item.id === order.id ? { ...item, osNumber: assigned } : item);
+                persistOrders();
+                updateHistory();
+                if (activeOrderId === order.id) showOsNumber(assigned);
+            }
             return true;
         } catch (error) {
             console.error('A ordem foi salva localmente, mas não sincronizou com o Neon:', error);
@@ -300,6 +308,31 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         } catch (error) {
             console.error('Não foi possível sincronizar as ordens com o Neon:', error);
             setMessage(`As ordens remotas não foram carregadas; os rascunhos locais foram preservados. ${error.message}`, true);
+        }
+    }
+
+    async function refreshOsNumbers() {
+        if (!companyId || document.hidden) return;
+        try {
+            const result = await apiRequest(`/api/orders?companyId=${encodeURIComponent(companyId)}`);
+            if (!Array.isArray(result.orders)) return;
+            const numbers = new Map(result.orders.map(order => [order.id, order.osNumber]));
+            let changed = false;
+            orders = orders.map(order => {
+                const osNumber = numbers.get(order.id);
+                if (osNumber && osNumber !== order.osNumber) {
+                    changed = true;
+                    return { ...order, osNumber };
+                }
+                return order;
+            });
+            if (!changed) return;
+            persistOrders();
+            updateHistory();
+            const active = orders.find(order => order.id === activeOrderId);
+            if (active) showOsNumber(active.osNumber);
+        } catch (error) {
+            console.error('Não foi possível atualizar os números das O.S.:', error);
         }
     }
 
@@ -454,4 +487,6 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
     updateHistory();
     updatePreview();
     void loadRemoteOrders();
+    document.addEventListener('visibilitychange', refreshOsNumbers);
+    setInterval(refreshOsNumbers, 30000);
 }

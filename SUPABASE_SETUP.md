@@ -66,9 +66,12 @@ estado da assinatura em cada operação.
 
 ## Número da O.S. e licenças
 
-O número da O.S. é definido apenas pelo gestor, no campo "Nº da O.S." de cada
-ordem em `gestor.html`; o colaborador vê o número somente para leitura. Dois
-números iguais na mesma empresa são recusados.
+O número da O.S. é definido apenas pelo gestor; o colaborador vê o número somente
+para leitura. Em `gestor.html`, o painel "Numeração automática" recebe o número da
+próxima O.S. uma única vez (coluna `companies.os_next_number`); a partir daí cada
+ordem nova recebe o número seguinte sozinha. O gestor ainda pode corrigir o número
+de qualquer ordem na lista. Dois números iguais na mesma empresa são recusados, e
+o sistema pula números já usados manualmente.
 
 Depois do teste de 30 dias, o gestor ativa a licença informando um código em
 `gestor.html`. Quem administra o sistema gera os códigos (uso único) com:

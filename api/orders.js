@@ -83,15 +83,43 @@ export default async function handler(req, res) {
         }
 
         if (req.method === 'POST') {
-            const rows = await user.sql`
-                insert into public.service_orders (company_id, id, created_by, data)
-                values (${company.id}, ${body.id}, ${user.id}, ${JSON.stringify(body.data)}::jsonb)
-                on conflict (company_id, id) do update
-                set data = excluded.data, updated_at = now()
-                where service_orders.created_by = ${user.id}
-                    or ${company.role === 'manager'}
-                returning id, data, updated_at
-            `;
+            const payload = JSON.stringify(body.data);
+            let rows;
+            for (let attempt = 0; attempt < 5 && !rows; attempt += 1) {
+                try {
+                    // O número só é reservado quando a ordem é nova; edições mantêm o número existente.
+                    rows = await user.sql`
+                        with bump as (
+                            update public.companies
+                            set os_next_number = os_next_number + 1
+                            where id = ${company.id} and os_next_number is not null
+                                and not exists (
+                                    select 1 from public.service_orders
+                                    where company_id = ${company.id} and id = ${body.id}
+                                )
+                            returning os_next_number - 1 as assigned
+                        )
+                        insert into public.service_orders (company_id, id, created_by, data, os_number)
+                        values (${company.id}, ${body.id}, ${user.id}, ${payload}::jsonb,
+                            (select assigned::text from bump))
+                        on conflict (company_id, id) do update
+                        set data = excluded.data, updated_at = now()
+                        where service_orders.created_by = ${user.id}
+                            or ${company.role === 'manager'}
+                        returning id, data, updated_at, os_number
+                    `;
+                } catch (error) {
+                    // Número já usado manualmente: pula para o próximo e tenta de novo.
+                    if (error?.code !== '23505') throw error;
+                    await user.sql`
+                        update public.companies set os_next_number = os_next_number + 1
+                        where id = ${company.id} and os_next_number is not null
+                    `;
+                }
+            }
+            if (!rows) {
+                return res.status(409).json({ message: 'Não foi possível reservar o número da O.S. Tente novamente.' });
+            }
             if (!rows.length) {
                 return res.status(403).json({ message: 'Você não tem permissão para alterar esta ordem.' });
             }
@@ -100,7 +128,8 @@ export default async function handler(req, res) {
                 order: {
                     id: rows[0].id,
                     data: rows[0].data,
-                    updatedAt: rows[0].updated_at
+                    updatedAt: rows[0].updated_at,
+                    osNumber: rows[0].os_number
                 }
             });
         }

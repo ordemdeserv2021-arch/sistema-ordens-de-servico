@@ -1,18 +1,33 @@
 import { requireUser, sendError } from './_lib/auth.js';
+import { getCompanyAccess, requireManager } from './_lib/tenant.js';
 
 export default async function handler(req, res) {
-    if (req.method !== 'GET' && req.method !== 'POST') {
-        res.setHeader('Allow', 'GET, POST');
+    if (!['GET', 'POST', 'PATCH'].includes(req.method)) {
+        res.setHeader('Allow', 'GET, POST, PATCH');
         return res.status(405).json({ message: 'Método não permitido.' });
     }
 
     try {
         const user = await requireUser(req);
 
+        if (req.method === 'PATCH') {
+            const company = await getCompanyAccess(user, req.query?.companyId, { allowExpired: true });
+            requireManager(company);
+            const raw = req.body?.osNextNumber;
+            const next = raw === null ? null : Number(raw);
+            if (next !== null && (!Number.isSafeInteger(next) || next < 0 || next > 999_999_999)) {
+                return res.status(400).json({ message: 'Informe um número inicial inteiro entre 0 e 999999999.' });
+            }
+            await user.sql`
+                update public.companies set os_next_number = ${next} where id = ${company.id}
+            `;
+            return res.status(200).json({ osNextNumber: next });
+        }
+
         if (req.method === 'GET') {
             const rows = await user.sql`
                 select c.id, c.name, c.subscription_status, c.trial_started_at,
-                    c.trial_ends_at, c.paid_until, m.role
+                    c.trial_ends_at, c.paid_until, c.os_next_number, m.role
                 from public.company_members m
                 join public.companies c on c.id = m.company_id
                 where m.user_id = ${user.id}

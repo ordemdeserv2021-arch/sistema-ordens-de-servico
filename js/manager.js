@@ -36,6 +36,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         verification.classList.remove('hidden');
     }
 
+    const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dashboardSections = () => [...document.getElementById('manager-dashboard').children]
+        .filter(element => element.id !== 'order-viewer');
+
+    function setViewText(id, value) {
+        document.getElementById(id).textContent = value || '—';
+    }
+
+    function setViewSignature(id, dataUrl) {
+        const image = document.getElementById(id);
+        const valid = typeof dataUrl === 'string' && /^data:image\/(png|jpeg);base64,/.test(dataUrl);
+        image.classList.toggle('hidden', !valid);
+        image.src = valid ? dataUrl : '';
+    }
+
+    function showOrder(order, companyName) {
+        const data = order.data || {};
+        const date = data['input-data'] ? new Date(data['input-data']) : null;
+        setViewText('view-company', companyName);
+        setViewText('view-numero', order.osNumber);
+        setViewText('view-data', date && !Number.isNaN(date.getTime())
+            ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date)
+            : '');
+        setViewText('view-tipo', data['input-tipo']);
+        setViewText('view-status', data['input-status']);
+        setViewText('view-local', data['input-local']);
+        setViewText('view-solicitante', data['input-solicitante']);
+        setViewText('view-titulo', data['input-titulo']);
+        setViewText('view-criador', order.createdBy?.name || order.createdBy?.email);
+        setViewText('view-equipamentos', data['input-equipamentos']);
+        setViewText('view-diagnostico', data['input-diagnostico']);
+        setViewText('view-procedimentos', data['input-procedimentos']);
+
+        const budgetContainer = document.getElementById('view-budget-items');
+        budgetContainer.replaceChildren();
+        let total = 0;
+        for (const item of Array.isArray(data.budgetItems) ? data.budgetItems : []) {
+            const quantity = Number(item.quantity) || 0;
+            const unitPrice = Number(item.unitPrice) || 0;
+            total += quantity * unitPrice;
+            const line = document.createElement('p');
+            line.textContent = `${item.description} — ${quantity} x ${currency.format(unitPrice)}`;
+            budgetContainer.append(line);
+        }
+        document.getElementById('view-budget-total').textContent = currency.format(total);
+        setViewSignature('view-sig-tec', data.signatures?.technician);
+        setViewSignature('view-sig-cli', data.signatures?.customer);
+
+        for (const section of dashboardSections()) section.classList.add('hidden');
+        document.getElementById('order-viewer').classList.remove('hidden');
+        window.scrollTo(0, 0);
+    }
+
+    function closeOrderViewer() {
+        document.getElementById('order-viewer').classList.add('hidden');
+        for (const section of dashboardSections()) section.classList.remove('hidden');
+        loadCompany();
+    }
+
     async function loadCompany() {
         const { company } = await apiRequest('/api/company');
         if (!company) {
@@ -74,6 +133,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             : 'Acesso encerrado.';
 
         document.getElementById('invite-panel').classList.toggle('hidden', !hasAccess);
+        const nextNumber = company.os_next_number;
+        document.getElementById('numbering-status').textContent = nextNumber === null || nextNumber === undefined
+            ? 'Desativada. Defina o número da próxima O.S. e o sistema numera as seguintes sozinho (+1 a cada ordem nova).'
+            : `Ativa. A próxima ordem nova receberá o nº ${nextNumber}. Você ainda pode corrigir o número de uma ordem na lista.`;
+        document.getElementById('numbering-start').value = nextNumber ?? '';
+        document.getElementById('numbering-disable').classList.toggle('hidden', nextNumber === null || nextNumber === undefined);
         if (!hasAccess) {
             const membersContainer = document.getElementById('company-members');
             membersContainer.textContent = 'O período de acesso terminou. Fale com o administrador do sistema para renovar.';
@@ -151,10 +216,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
 
-                const openLink = document.createElement('a');
+                const openLink = document.createElement('button');
+                openLink.type = 'button';
                 openLink.className = 'btn-secondary';
-                openLink.href = `index.html?order=${encodeURIComponent(order.id)}`;
-                openLink.textContent = 'Abrir / editar';
+                openLink.textContent = 'Ver ordem';
+                openLink.addEventListener('click', () => showOrder(order, company.name));
                 const actions = document.createElement('div');
                 actions.className = 'flex flex-wrap items-center gap-2';
                 actions.append(numberForm, openLink);
@@ -287,6 +353,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('create-company').addEventListener('click', createCompany);
+    document.getElementById('order-viewer-back').addEventListener('click', closeOrderViewer);
+    document.getElementById('order-viewer-print').addEventListener('click', () => window.print());
 
     document.getElementById('license-form').addEventListener('submit', async event => {
         event.preventDefault();
@@ -308,6 +376,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitButton.disabled = false;
         }
     });
+
+    async function saveNumbering(value) {
+        const numberingMessage = document.getElementById('numbering-message');
+        setMessage(numberingMessage, 'Salvando…');
+        try {
+            await apiRequest('/api/company', { method: 'PATCH', body: { osNextNumber: value } });
+            await loadCompany();
+            setMessage(numberingMessage, value === null ? 'Numeração automática desativada.' : 'Numeração salva.');
+        } catch (error) {
+            setMessage(numberingMessage, error.message || 'Não foi possível salvar a numeração.', true);
+        }
+    }
+
+    document.getElementById('numbering-form').addEventListener('submit', event => {
+        event.preventDefault();
+        void saveNumbering(Number(document.getElementById('numbering-start').value));
+    });
+    document.getElementById('numbering-disable').addEventListener('click', () => void saveNumbering(null));
 
     document.getElementById('invite-form').addEventListener('submit', async event => {
         event.preventDefault();
