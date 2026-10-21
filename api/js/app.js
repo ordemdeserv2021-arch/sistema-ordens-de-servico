@@ -4,6 +4,7 @@ import {
     handleLogout,
     handleSignup,
     initNeonAuth,
+    apiRequest,
     sendEmailVerificationCode,
     verifyEmailCode
 } from './auth.js';
@@ -18,7 +19,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const resendButton = document.getElementById('btn-resend-code');
     const verificationInput = document.getElementById('email-otp');
     let pendingVerificationEmail = '';
+    let inviteToken = new URLSearchParams(window.location.search).get('invite') || '';
     const authReady = initNeonAuth();
+    if (!inviteToken) signupButton.hidden = true;
 
     function setAuthMessage(text, isError = false) {
         authMessage.textContent = text;
@@ -32,11 +35,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         setAuthMessage('O acesso ainda não foi configurado pelo administrador. Tente novamente mais tarde.', true);
     }
 
-    const showApp = (session) => {
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('app-container').classList.remove('hidden');
-        const userId = session?.user?.id || session?.session?.userId || session?.user?.email || session?.email || 'local';
-        initServiceOrderForm(userId);
+    const showApp = async (session) => {
+        try {
+            if (inviteToken) {
+                await apiRequest('/api/invitations', {
+                    method: 'PUT',
+                    body: { token: inviteToken }
+                });
+                inviteToken = '';
+                window.history.replaceState(null, '', window.location.pathname);
+            }
+
+            const { company } = await apiRequest('/api/company');
+            if (!company) {
+                throw new Error('Esta conta ainda não pertence a uma empresa. Se você é gestor, acesse a página de gestão para cadastrar sua empresa; se é colaborador, peça um convite ao gestor.');
+            }
+
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            const userId = session?.user?.id || session?.session?.userId || session?.user?.email || session?.email || 'local';
+            const requestedOrderId = new URLSearchParams(window.location.search).get('order');
+            initServiceOrderForm(userId, company.id, requestedOrderId);
+        } catch (error) {
+            console.error('Não foi possível carregar a empresa:', error);
+            setAuthMessage(error.message || 'Não foi possível carregar a empresa vinculada a esta conta.', true);
+        }
     };
     const getCredentials = () => ({
         email: document.getElementById('user-email').value.trim(),
@@ -76,6 +99,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { email, password } = getCredentials();
         const action = event.submitter?.dataset.authAction;
         const button = action === 'signup' ? signupButton : loginButton;
+
+        if (action === 'signup' && !inviteToken) {
+            setAuthMessage('O cadastro de colaboradores é feito somente por convite. Peça o link ao gestor da empresa.', true);
+            return;
+        }
 
         if (action === 'signup' && password.length < 8) {
             setAuthMessage('A senha precisa ter pelo menos 8 caracteres.', true);
@@ -170,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const session = await getCurrentSession();
         if (session?.session && session?.user?.emailVerified === true) {
-            showApp(session);
+            await showApp(session);
         } else if (session?.session && session?.user?.emailVerified === false) {
             setVerificationMode(session.user.email);
             setAuthMessage('Sua conta ainda não confirmou o e-mail. Clique em “Enviar código” para receber um código de confirmação.', true);

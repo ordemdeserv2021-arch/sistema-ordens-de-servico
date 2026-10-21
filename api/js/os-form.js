@@ -1,4 +1,5 @@
 import { setupSignatureCanvas } from './canvas.js';
+import { apiRequest } from './auth.js';
 
 const fieldIds = [
     'input-data',
@@ -17,7 +18,7 @@ const currency = new Intl.NumberFormat('pt-BR', {
     currency: 'BRL'
 });
 
-export function initServiceOrderForm(userId) {
+export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
     const form = document.getElementById('service-order-form');
     if (!form || form.dataset.initialized === 'true') return;
     form.dataset.initialized = 'true';
@@ -30,6 +31,7 @@ export function initServiceOrderForm(userId) {
     let orders = [];
     let activeOrderId = null;
     let storageAvailable = true;
+    const syncedOrderIds = new Set();
 
     function setMessage(text, isError = false) {
         message.textContent = text;
@@ -161,7 +163,7 @@ export function initServiceOrderForm(userId) {
         if (!matches.length) {
             const empty = document.createElement('p');
             empty.className = 'rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500';
-            empty.textContent = search ? 'Nenhum rascunho encontrado.' : 'Ainda não há rascunhos salvos neste aparelho.';
+            empty.textContent = search ? 'Nenhuma ordem encontrada.' : 'Ainda não há ordens salvas.';
             historyList.append(empty);
             return;
         }
@@ -246,7 +248,62 @@ export function initServiceOrderForm(userId) {
         updatePreview();
     }
 
-    function saveOrder(event) {
+    async function syncOrder(order) {
+        try {
+            await apiRequest('/api/orders', {
+                method: 'POST',
+                body: { id: order.id, data: order.data }
+            });
+            syncedOrderIds.add(order.id);
+            return true;
+        } catch (error) {
+            console.error('A ordem foi salva localmente, mas não sincronizou com o Neon:', error);
+            setMessage(`Rascunho salvo neste aparelho, mas não foi sincronizado: ${error.message}`, true);
+            return false;
+        }
+    }
+
+    async function loadRemoteOrders() {
+        try {
+            const result = await apiRequest(`/api/orders?companyId=${encodeURIComponent(companyId)}`);
+            const remoteOrders = result.orders;
+            if (!Array.isArray(remoteOrders)) {
+                throw new Error('O servidor retornou um histórico inválido.');
+            }
+
+            const merged = new Map(remoteOrders.map(order => [order.id, order]));
+            for (const order of orders) {
+                const remote = merged.get(order.id);
+                if (!remote || new Date(order.updatedAt).getTime() > new Date(remote.updatedAt).getTime()) {
+                    merged.set(order.id, order);
+                }
+            }
+            orders = [...merged.values()].sort((left, right) =>
+                new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+            );
+            for (const order of remoteOrders) syncedOrderIds.add(order.id);
+            if (!persistOrders()) return;
+            updateHistory();
+
+            const remoteById = new Map(remoteOrders.map(order => [order.id, order]));
+            let allLocalChangesSynced = true;
+            for (const order of orders) {
+                const remote = remoteById.get(order.id);
+                if (!remote || new Date(order.updatedAt).getTime() > new Date(remote.updatedAt).getTime()) {
+                    if (!await syncOrder(order)) allLocalChangesSynced = false;
+                }
+            }
+            if (requestedOrderId) loadOrder(requestedOrderId);
+            if (allLocalChangesSynced) {
+                setMessage('Ordens sincronizadas com a empresa.');
+            }
+        } catch (error) {
+            console.error('Não foi possível sincronizar as ordens com o Neon:', error);
+            setMessage(`As ordens remotas não foram carregadas; os rascunhos locais foram preservados. ${error.message}`, true);
+        }
+    }
+
+    async function saveOrder(event) {
         event.preventDefault();
         const previousOrders = orders;
         const existingIndex = orders.findIndex(order => order.id === activeOrderId);
@@ -268,7 +325,9 @@ export function initServiceOrderForm(userId) {
         }
         activeOrderId = order.id;
         updateHistory();
-        setMessage('Rascunho salvo neste aparelho. Ele ainda não foi sincronizado com o Neon.');
+        if (await syncOrder(order)) {
+            setMessage('Ordem salva e sincronizada com a empresa.');
+        }
     }
 
     function loadOrder(orderId) {
@@ -306,13 +365,37 @@ export function initServiceOrderForm(userId) {
         image.src = dataUrl;
     }
 
-    function deleteOrder(orderId) {
-        if (!window.confirm('Excluir este rascunho salvo neste aparelho?')) return;
+    async function deleteOrder(orderId) {
+        if (!window.confirm('Excluir esta ordem de serviço da empresa?')) return;
+        const previousOrders = orders;
         orders = orders.filter(order => order.id !== orderId);
-        if (!persistOrders()) return;
+        if (!persistOrders()) {
+            orders = previousOrders;
+            return;
+        }
+
+        if (syncedOrderIds.has(orderId)) {
+            try {
+                await apiRequest('/api/orders', {
+                    method: 'DELETE',
+                    body: { id: orderId }
+                });
+                syncedOrderIds.delete(orderId);
+            } catch (error) {
+                if (error.status === 404) {
+                    syncedOrderIds.delete(orderId);
+                } else {
+                    orders = previousOrders;
+                    persistOrders();
+                    console.error('Não foi possível excluir a ordem sincronizada:', error);
+                    setMessage(`A ordem não foi excluída da empresa: ${error.message}`, true);
+                    return;
+                }
+            }
+        }
         if (activeOrderId === orderId) activeOrderId = null;
         updateHistory();
-        setMessage('Rascunho excluído do histórico local.');
+        setMessage('Ordem excluída da empresa e deste aparelho.');
     }
 
     function resetForm() {
@@ -359,4 +442,5 @@ export function initServiceOrderForm(userId) {
     orders = readOrders();
     updateHistory();
     updatePreview();
+    void loadRemoteOrders();
 }

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão da empresa - Sistema de O.S.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+    <main class="mx-auto max-w-3xl space-y-6 p-4 sm:p-8">
+        <header class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold">Gestão da empresa</h1>
+                <p class="text-sm text-slate-600">Cadastre sua empresa e convide os colaboradores.</p>
+            </div>
+            <a class="text-sm text-blue-700 hover:underline" href="index.html">Página dos colaboradores</a>
+        </header>
+
+        <section id="manager-auth-screen" class="rounded-xl bg-white p-6 shadow">
+            <h2 class="mb-4 text-lg font-semibold">Acesso do gestor</h2>
+            <form id="manager-auth-form" class="space-y-4">
+                <div id="manager-signup-fields" class="hidden space-y-4">
+                    <div>
+                        <label for="manager-name" class="form-label">Nome do gestor</label>
+                        <input id="manager-name" class="form-input" autocomplete="name">
+                    </div>
+                    <div>
+                        <label for="company-name" class="form-label">Nome da empresa</label>
+                        <input id="company-name" class="form-input" autocomplete="organization">
+                    </div>
+                </div>
+                <div>
+                    <label for="manager-email" class="form-label">E-mail</label>
+                    <input id="manager-email" type="email" class="form-input" autocomplete="username" required>
+                </div>
+                <div>
+                    <label for="manager-password" class="form-label">Senha</label>
+                    <input id="manager-password" type="password" class="form-input" autocomplete="current-password" required>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button id="manager-login" type="submit" data-auth-action="login" class="btn-primary">Entrar</button>
+                    <button id="manager-signup" type="submit" data-auth-action="signup" class="btn-secondary">Cadastrar empresa</button>
+                </div>
+                <p id="manager-auth-message" class="min-h-5 text-sm" role="status" aria-live="polite"></p>
+            </form>
+            <div id="manager-verification" class="hidden space-y-3">
+                <p id="manager-verification-label" class="text-sm text-slate-600"></p>
+                <label for="manager-otp" class="form-label">Código de confirmação</label>
+                <input id="manager-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" class="form-input">
+                <div class="flex flex-wrap gap-2">
+                    <button id="manager-verify" type="button" class="btn-primary">Confirmar e-mail</button>
+                    <button id="manager-resend" type="button" class="btn-secondary">Enviar código novamente</button>
+                </div>
+                <p id="manager-verification-message" class="min-h-5 text-sm" role="status" aria-live="polite"></p>
+            </div>
+        </section>
+
+        <section id="company-setup" class="hidden rounded-xl bg-white p-6 shadow">
+            <h2 class="text-lg font-semibold">Cadastre sua empresa</h2>
+            <p class="my-2 text-sm text-slate-600">A confirmação do e-mail inicia o período de teste de 30 dias.</p>
+            <label for="setup-company-name" class="form-label">Nome da empresa</label>
+            <input id="setup-company-name" class="form-input">
+            <button id="create-company" type="button" class="btn-primary mt-4">Criar empresa</button>
+            <p id="company-setup-message" class="mt-3 min-h-5 text-sm" role="status" aria-live="polite"></p>
+        </section>
+
+        <section id="manager-dashboard" class="hidden space-y-6">
+            <div class="rounded-xl bg-white p-6 shadow">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 id="dashboard-company-name" class="text-xl font-bold"></h2>
+                        <p id="dashboard-subscription" class="mt-1 text-sm text-slate-600"></p>
+                    </div>
+                    <button id="manager-logout" type="button" class="btn-secondary">Sair</button>
+                </div>
+            </div>
+
+            <div id="invite-panel" class="rounded-xl bg-white p-6 shadow">
+                <h2 class="text-lg font-semibold">Convidar colaborador</h2>
+                <p class="my-2 text-sm text-slate-600">O link é válido por 7 dias e só pode ser usado com o e-mail informado.</p>
+                <form id="invite-form" class="flex flex-wrap gap-2">
+                    <label for="invite-email" class="sr-only">E-mail do colaborador</label>
+                    <input id="invite-email" type="email" class="form-input min-w-64 flex-1" placeholder="colaborador@empresa.com" required>
+                    <button type="submit" class="btn-primary">Gerar convite</button>
+                </form>
+                <div id="invite-result" class="mt-4 hidden space-y-2">
+                    <label for="invite-link" class="form-label">Copie e envie este link ao colaborador</label>
+                    <div class="flex flex-wrap gap-2">
+                        <input id="invite-link" readonly class="form-input min-w-64 flex-1">
+                        <button id="copy-invite" type="button" class="btn-secondary">Copiar link</button>
+                    </div>
+                </div>
+                <p id="invite-message" class="mt-3 min-h-5 text-sm" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="rounded-xl bg-white p-6 shadow">
+                <h2 class="mb-3 text-lg font-semibold">Equipe</h2>
+                <div id="company-members" class="space-y-2 text-sm"></div>
+            </div>
+
+            <div class="rounded-xl bg-white p-6 shadow">
+                <h2 class="mb-3 text-lg font-semibold">Ordens da empresa</h2>
+                <div id="company-orders" class="space-y-2 text-sm"></div>
+            </div>
+        </section>
+    </main>
+    <script src="api/js/config.js"></script>
+    <script type="module" src="api/js/manager.js"></script>
+</body>
+</html>
