@@ -15,8 +15,13 @@ create table if not exists public.company_members (
     user_id text not null,
     role text not null check (role in ('manager', 'collaborator')),
     created_at timestamptz not null default now(),
+    display_name text check (display_name is null or char_length(display_name) between 1 and 120),
+    registration text check (registration is null or char_length(registration) between 1 and 40),
     primary key (company_id, user_id)
 );
+
+alter table public.company_members add column if not exists display_name text check (display_name is null or char_length(display_name) between 1 and 120);
+alter table public.company_members add column if not exists registration text check (registration is null or char_length(registration) between 1 and 40);
 
 create unique index if not exists company_members_single_company_per_user_idx
     on public.company_members (user_id);

@@ -187,7 +187,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const container = document.getElementById('company-members');
         const term = document.getElementById('member-search').value.trim().toLowerCase();
         const visible = members.filter(member =>
-            !term || `${member.name} ${member.email}`.toLowerCase().includes(term));
+            !term || `${member.displayName || ''} ${member.registration || ''} ${member.name} ${member.email}`
+                .toLowerCase().includes(term));
         container.replaceChildren();
         document.getElementById('member-count').textContent =
             `${visible.length} de ${members.length} ${members.length === 1 ? 'pessoa' : 'pessoas'}`;
@@ -202,11 +203,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const card = makeEl('article', 'rounded border border-slate-200');
         const header = makeEl('div', 'flex flex-wrap items-center justify-between gap-3 p-3');
         const info = makeEl('div');
-        info.append(
-            makeEl('p', 'font-medium', member.name || member.email),
-            makeEl('p', 'text-xs text-slate-600',
-                `${member.email} · ${member.role === 'manager' ? 'gestor' : 'colaborador'}`)
-        );
+        const title = makeEl('p', 'font-medium');
+        const subtitle = makeEl('p', 'text-xs text-slate-600');
+        const refreshHeader = () => {
+            title.textContent = (member.displayName || member.name || member.email)
+                + (member.registration ? ` · Matrícula ${member.registration}` : '');
+            subtitle.textContent = `${member.email} · ${member.role === 'manager' ? 'gestor' : 'colaborador'}`;
+        };
+        refreshHeader();
+        info.append(title, subtitle);
         const toggle = makeEl('button', 'btn-secondary', 'Gerenciar');
         toggle.type = 'button';
         toggle.setAttribute('aria-expanded', 'false');
@@ -218,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             toggle.setAttribute('aria-expanded', String(open));
             if (open && !loaded) {
                 loaded = true;
-                buildMemberPanel(member, panel);
+                buildMemberPanel(member, panel, refreshHeader);
             }
         });
         header.append(info, toggle);
@@ -226,7 +231,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         return card;
     }
 
-    function buildMemberPanel(member, panel) {
+    function buildMemberPanel(member, panel, refreshHeader) {
+        const identitySection = makeEl('section', 'space-y-2');
+        identitySection.append(makeEl('h3', 'font-semibold', 'Identificação'));
+        const identityForm = makeEl('form', 'flex flex-wrap items-center gap-2');
+        const displayNameInput = makeEl('input', 'form-input min-w-40 flex-1');
+        displayNameInput.placeholder = 'Nome do colaborador';
+        displayNameInput.maxLength = 120;
+        displayNameInput.value = member.displayName || '';
+        displayNameInput.setAttribute('aria-label', 'Nome do colaborador');
+        const registrationInput = makeEl('input', 'form-input w-40');
+        registrationInput.placeholder = 'Matrícula';
+        registrationInput.maxLength = 40;
+        registrationInput.value = member.registration || '';
+        registrationInput.setAttribute('aria-label', 'Matrícula');
+        const identityButton = makeEl('button', 'btn-primary', 'Salvar');
+        identityButton.type = 'submit';
+        identityForm.append(displayNameInput, registrationInput, identityButton);
+        const identityMessage = makeEl('p', 'min-h-5 text-xs');
+        identityMessage.setAttribute('role', 'status');
+        identityForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            identityButton.disabled = true;
+            setMessage(identityMessage, 'Salvando…');
+            try {
+                const saved = await apiRequest('/api/members', {
+                    method: 'PATCH',
+                    body: {
+                        userId: member.id,
+                        displayName: displayNameInput.value,
+                        registration: registrationInput.value
+                    }
+                });
+                member.displayName = saved.displayName;
+                member.registration = saved.registration;
+                refreshHeader();
+                setMessage(identityMessage, 'Identificação salva.');
+            } catch (error) {
+                setMessage(identityMessage, error.message || 'Não foi possível salvar.', true);
+            } finally {
+                identityButton.disabled = false;
+            }
+        });
+        identitySection.append(identityForm, identityMessage);
+        panel.append(identitySection);
+
         const locationsSection = makeEl('section', 'space-y-2');
         locationsSection.append(makeEl('h3', 'font-semibold', 'Locais de preventiva'));
         locationsSection.append(makeEl('p', 'text-xs text-slate-600',
@@ -625,15 +674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('invite-result').classList.remove('hidden');
             document.getElementById('invite-email').value = '';
             setMessage(inviteMessage, `Convite válido até ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(result.invitation.expires_at))}.`);
-            const { members } = await apiRequest('/api/members');
-            const membersContainer = document.getElementById('company-members');
-            membersContainer.replaceChildren();
-            for (const member of members) {
-                const row = document.createElement('p');
-                row.className = 'rounded border border-slate-200 p-3';
-                row.textContent = `${member.name} — ${member.email} (${member.role === 'manager' ? 'gestor' : 'colaborador'})`;
-                membersContainer.append(row);
-            }
+            await loadMembers({ name: companyName });
         } catch (error) {
             setMessage(inviteMessage, error.message || 'Não foi possível gerar o convite.', true);
         } finally {
