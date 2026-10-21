@@ -117,8 +117,25 @@ create index if not exists service_orders_company_updated_idx
 create index if not exists service_orders_creator_idx
     on public.service_orders (company_id, created_by, updated_at desc);
 
+alter table public.service_orders add column if not exists os_number text
+    check (os_number is null or length(os_number) between 1 and 30);
+
+create unique index if not exists service_orders_company_os_number_idx
+    on public.service_orders (company_id, os_number) where os_number is not null;
+
+create table if not exists public.license_codes (
+    id uuid primary key default gen_random_uuid(),
+    code_hash text not null unique,
+    days integer not null check (days between 1 and 3660),
+    note text,
+    created_at timestamptz not null default now(),
+    redeemed_at timestamptz,
+    redeemed_company_id uuid references public.companies (id) on delete set null
+);
+
 alter table public.companies enable row level security;
 alter table public.company_members enable row level security;
+alter table public.license_codes enable row level security;
 alter table public.company_invitations enable row level security;
 alter table public.service_orders enable row level security;
 

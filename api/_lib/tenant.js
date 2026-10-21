@@ -4,7 +4,7 @@ export function invalidRequest(message) {
     return error;
 }
 
-export async function getCompanyAccess(user, companyId) {
+export async function getCompanyAccess(user, companyId, { allowExpired = false } = {}) {
     if (companyId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyId)) {
         throw invalidRequest('O identificador da empresa é inválido.');
     }
@@ -43,7 +43,7 @@ export async function getCompanyAccess(user, companyId) {
         && company.paid_until
         && new Date(company.paid_until).getTime() > Date.now();
 
-    if (!trialActive && !paidActive) {
+    if (!trialActive && !paidActive && !allowExpired) {
         const error = new Error('O período de acesso da empresa terminou. Fale com o gestor para regularizar a assinatura.');
         error.statusCode = 402;
         throw error;

@@ -275,7 +275,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
             for (const order of orders) {
                 const remote = merged.get(order.id);
                 if (!remote || new Date(order.updatedAt).getTime() > new Date(remote.updatedAt).getTime()) {
-                    merged.set(order.id, order);
+                    merged.set(order.id, { ...order, osNumber: remote?.osNumber ?? order.osNumber });
                 }
             }
             orders = [...merged.values()].sort((left, right) =>
@@ -312,6 +312,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
                 ? crypto.randomUUID()
                 : `${Date.now()}-${Math.random().toString(36).slice(2)}`),
             data: readFormData(),
+            osNumber: orders[existingIndex]?.osNumber,
             updatedAt: new Date().toISOString()
         };
 
@@ -344,6 +345,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         restoreSignature('canvas-tec', order.data.signatures?.technician);
         restoreSignature('canvas-cli', order.data.signatures?.customer);
         updatePreview();
+        showOsNumber(order.osNumber);
         document.querySelector('[data-tab="tab-nova-os"]').click();
         setMessage('Rascunho carregado. Ao salvar, as alterações substituirão esta cópia local.');
     }
@@ -398,9 +400,18 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         setMessage('Ordem excluída da empresa e deste aparelho.');
     }
 
+    const OS_NUMBER_PLACEHOLDER = 'Atribuído pelo usuário master';
+
+    function showOsNumber(osNumber) {
+        const text = osNumber || OS_NUMBER_PLACEHOLDER;
+        document.getElementById('input-os-num').value = text;
+        document.getElementById('prev-os-num').textContent = text;
+    }
+
     function resetForm() {
         form.reset();
         activeOrderId = null;
+        showOsNumber(null);
         document.getElementById('input-data').value = getCurrentDateTime();
         budgetItemsContainer.replaceChildren();
         for (const canvasId of ['canvas-tec', 'canvas-cli']) {

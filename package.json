@@ -2,6 +2,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file=.env dev-server.js",
+    "licenca": "node --env-file=.env scripts/gerar-licenca.mjs",
     "test": "node --test"
   },
   "dependencies": {

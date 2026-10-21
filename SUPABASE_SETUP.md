@@ -64,6 +64,23 @@ consulta e altera as ordens da empresa; cada colaborador consulta e altera as
 ordens que criou. A API valida o JWT do Neon Auth e verifica o vínculo e o
 estado da assinatura em cada operação.
 
+## Número da O.S. e licenças
+
+O número da O.S. é definido apenas pelo gestor, no campo "Nº da O.S." de cada
+ordem em `gestor.html`; o colaborador vê o número somente para leitura. Dois
+números iguais na mesma empresa são recusados.
+
+Depois do teste de 30 dias, o gestor ativa a licença informando um código em
+`gestor.html`. Quem administra o sistema gera os códigos (uso único) com:
+
+```
+npm run licenca -- 30 Nome da empresa
+```
+
+O argumento é o número de dias. O código aparece só uma vez; o banco guarda
+apenas o hash. Um código ativado soma os dias ao prazo atual. A migração
+(`neon_setup.sql`) cria a coluna `os_number` e a tabela `license_codes`.
+
 O painel administrativo para confirmação manual de pagamentos, a integração
 com o Google Drive e o envio automático de convites ainda não fazem parte desta
 etapa. As ordens existentes no armazenamento local só são migradas quando o

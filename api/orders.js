@@ -1,11 +1,11 @@
 import { requireUser, sendError } from './_lib/auth.js';
-import { getCompanyAccess } from './_lib/tenant.js';
+import { getCompanyAccess, requireManager } from './_lib/tenant.js';
 
 const MAX_ORDER_BYTES = 1_500_000;
 
 export default async function handler(req, res) {
-    if (!['GET', 'POST', 'DELETE'].includes(req.method)) {
-        res.setHeader('Allow', 'GET, POST, DELETE');
+    if (!['GET', 'POST', 'DELETE', 'PATCH'].includes(req.method)) {
+        res.setHeader('Allow', 'GET, POST, DELETE, PATCH');
         return res.status(405).json({ message: 'Método não permitido.' });
     }
 
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
         if (req.method === 'GET') {
             const rows = company.role === 'manager'
                 ? await user.sql`
-                    select o.id, o.data, o.updated_at, u.name as created_by_name,
+                    select o.id, o.data, o.updated_at, o.os_number, u.name as created_by_name,
                         u.email as created_by_email
                     from public.service_orders o
                     left join neon_auth."user" u on u.id::text = o.created_by
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
                     order by o.updated_at desc
                 `
                 : await user.sql`
-                    select id, data, updated_at, null as created_by_name, null as created_by_email
+                    select id, data, updated_at, os_number, null as created_by_name, null as created_by_email
                     from public.service_orders
                     where company_id = ${company.id} and created_by = ${user.id}
                     order by updated_at desc
@@ -35,11 +35,42 @@ export default async function handler(req, res) {
                     id: row.id,
                     data: row.data,
                     updatedAt: row.updated_at,
+                    osNumber: row.os_number,
                     createdBy: row.created_by_name || row.created_by_email
                         ? { name: row.created_by_name, email: row.created_by_email }
                         : null
                 }))
             });
+        }
+
+        if (req.method === 'PATCH') {
+            requireManager(company);
+            const id = req.body?.id;
+            const rawNumber = req.body?.osNumber;
+            const osNumber = typeof rawNumber === 'string' ? rawNumber.trim() : '';
+            if (typeof id !== 'string' || !id || id.length > 100
+                || typeof rawNumber !== 'string' || osNumber.length > 30) {
+                return res.status(400).json({ message: 'Informe um número de O.S. com até 30 caracteres.' });
+            }
+
+            let rows;
+            try {
+                rows = await user.sql`
+                    update public.service_orders
+                    set os_number = ${osNumber || null}
+                    where company_id = ${company.id} and id = ${id}
+                    returning id, os_number
+                `;
+            } catch (error) {
+                if (error?.code === '23505') {
+                    return res.status(409).json({ message: 'Já existe outra ordem com esse número.' });
+                }
+                throw error;
+            }
+            if (!rows.length) {
+                return res.status(404).json({ message: 'A ordem não foi encontrada.' });
+            }
+            return res.status(200).json({ order: { id: rows[0].id, osNumber: rows[0].os_number } });
         }
 
         const body = req.body && typeof req.body === 'object' ? req.body : {};

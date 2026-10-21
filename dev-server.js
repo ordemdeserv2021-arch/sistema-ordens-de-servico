@@ -4,6 +4,7 @@ import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import companyHandler from './api/company.js';
 import invitationsHandler from './api/invitations.js';
+import licenseHandler from './api/license.js';
 import membersHandler from './api/members.js';
 import ordersHandler from './api/orders.js';
 
@@ -13,6 +14,7 @@ const maxBodyBytes = 2_000_000;
 const apiHandlers = new Map([
     ['/api/company', companyHandler],
     ['/api/invitations', invitationsHandler],
+    ['/api/license', licenseHandler],
     ['/api/members', membersHandler],
     ['/api/orders', ordersHandler]
 ]);

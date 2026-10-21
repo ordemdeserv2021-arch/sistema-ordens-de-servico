@@ -54,20 +54,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         authScreen.classList.add('hidden');
         dashboard.classList.remove('hidden');
         document.getElementById('dashboard-company-name').textContent = company.name;
-        const trialEnd = company.trial_ends_at
-            ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(company.trial_ends_at))
-            : '—';
-        document.getElementById('dashboard-subscription').textContent =
-            company.subscription_status === 'trial'
-                ? `Período de teste até ${trialEnd}.`
-                : `Situação da assinatura: ${company.subscription_status}.`;
-
+        const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' });
         const hasAccess = (company.subscription_status === 'trial'
                 && new Date(company.trial_ends_at).getTime() > Date.now())
             || (company.subscription_status === 'active' && company.paid_until
                 && new Date(company.paid_until).getTime() > Date.now());
+        const licenseStatus = document.getElementById('license-status');
+        if (company.subscription_status === 'active' && company.paid_until && hasAccess) {
+            licenseStatus.textContent = `Licença ativa até ${dateFormat.format(new Date(company.paid_until))}. Um novo código soma dias ao prazo atual.`;
+        } else if (hasAccess) {
+            licenseStatus.textContent = `Período de teste até ${dateFormat.format(new Date(company.trial_ends_at))}. Ao ativar uma licença, os dias restantes do teste são mantidos.`;
+        } else {
+            licenseStatus.textContent = 'O acesso da empresa terminou. Informe um código de licença para reativar o sistema.';
+        }
+        document.getElementById('dashboard-subscription').textContent = hasAccess
+            ? (company.subscription_status === 'active'
+                ? `Licença ativa até ${dateFormat.format(new Date(company.paid_until))}.`
+                : `Período de teste até ${dateFormat.format(new Date(company.trial_ends_at))}.`)
+            : 'Acesso encerrado.';
+
+        document.getElementById('invite-panel').classList.toggle('hidden', !hasAccess);
         if (!hasAccess) {
-            document.getElementById('invite-panel').classList.add('hidden');
             const membersContainer = document.getElementById('company-members');
             membersContainer.textContent = 'O período de acesso terminou. Fale com o administrador do sistema para renovar.';
             document.getElementById('company-orders').textContent =
@@ -104,16 +111,54 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const details = document.createElement('div');
                 const title = document.createElement('p');
                 title.className = 'font-medium';
-                title.textContent = order.data['input-titulo'] || 'Ordem sem título';
+                title.textContent = `${order.osNumber ? `O.S. ${order.osNumber} — ` : ''}${order.data['input-titulo'] || 'Ordem sem título'}`;
                 const summary = document.createElement('p');
                 summary.className = 'text-sm text-slate-600';
                 summary.textContent = `${order.data['input-local'] || 'Sem cliente/local'} · ${order.data['input-solicitante'] || 'Sem solicitante'} · ${order.createdBy?.name || order.createdBy?.email || 'Colaborador'} · ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(order.updatedAt))}`;
                 details.append(title, summary);
+
+                const numberForm = document.createElement('form');
+                numberForm.className = 'flex items-center gap-2';
+                const numberInput = document.createElement('input');
+                numberInput.className = 'form-input w-32';
+                numberInput.maxLength = 30;
+                numberInput.placeholder = 'Nº da O.S.';
+                numberInput.value = order.osNumber || '';
+                numberInput.setAttribute('aria-label', 'Número da O.S.');
+                const numberButton = document.createElement('button');
+                numberButton.type = 'submit';
+                numberButton.className = 'btn-secondary';
+                numberButton.textContent = 'Salvar nº';
+                const numberMessage = document.createElement('span');
+                numberMessage.className = 'text-xs';
+                numberMessage.setAttribute('role', 'status');
+                numberForm.append(numberInput, numberButton, numberMessage);
+                numberForm.addEventListener('submit', async event => {
+                    event.preventDefault();
+                    numberButton.disabled = true;
+                    try {
+                        const result = await apiRequest('/api/orders', {
+                            method: 'PATCH',
+                            body: { id: order.id, osNumber: numberInput.value }
+                        });
+                        order.osNumber = result.order.osNumber;
+                        title.textContent = `${order.osNumber ? `O.S. ${order.osNumber} — ` : ''}${order.data['input-titulo'] || 'Ordem sem título'}`;
+                        setMessage(numberMessage, 'Salvo.');
+                    } catch (error) {
+                        setMessage(numberMessage, error.message || 'Não foi possível salvar.', true);
+                    } finally {
+                        numberButton.disabled = false;
+                    }
+                });
+
                 const openLink = document.createElement('a');
                 openLink.className = 'btn-secondary';
                 openLink.href = `index.html?order=${encodeURIComponent(order.id)}`;
                 openLink.textContent = 'Abrir / editar';
-                row.append(details, openLink);
+                const actions = document.createElement('div');
+                actions.className = 'flex flex-wrap items-center gap-2';
+                actions.append(numberForm, openLink);
+                row.append(details, actions);
                 ordersContainer.append(row);
             }
         } catch (error) {
@@ -242,6 +287,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('create-company').addEventListener('click', createCompany);
+
+    document.getElementById('license-form').addEventListener('submit', async event => {
+        event.preventDefault();
+        const licenseMessage = document.getElementById('license-message');
+        const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        setMessage(licenseMessage, 'Validando o código…');
+        try {
+            await apiRequest('/api/license', {
+                method: 'POST',
+                body: { code: document.getElementById('license-code').value }
+            });
+            document.getElementById('license-code').value = '';
+            await loadCompany();
+            setMessage(licenseMessage, 'Licença ativada com sucesso.');
+        } catch (error) {
+            setMessage(licenseMessage, error.message || 'Não foi possível ativar a licença.', true);
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
 
     document.getElementById('invite-form').addEventListener('submit', async event => {
         event.preventDefault();
