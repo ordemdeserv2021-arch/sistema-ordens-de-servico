@@ -85,7 +85,119 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
             technician: getSignatureData('canvas-tec'),
             customer: getSignatureData('canvas-cli')
         };
+        data.photos = [...photos];
         return data;
+    }
+
+    const MAX_PHOTOS = 6;
+    const PHOTO_MAX_SIDE = 1000;
+    let photos = [];
+
+    function resizePhoto(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const image = new Image();
+            image.onload = () => {
+                URL.revokeObjectURL(url);
+                const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(image.width, image.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(image.width * scale);
+                canvas.height = Math.round(image.height * scale);
+                canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.65));
+            };
+            image.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Não foi possível ler a imagem.'));
+            };
+            image.src = url;
+        });
+    }
+
+    function renderPhotoList() {
+        const list = document.getElementById('photo-list');
+        list.replaceChildren();
+        photos.forEach((src, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'relative';
+            const image = document.createElement('img');
+            image.src = src;
+            image.alt = `Foto ${index + 1} do serviço`;
+            image.className = 'h-20 w-full rounded object-cover';
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'absolute right-1 top-1 rounded bg-white/90 px-1.5 text-xs font-bold text-red-700 shadow';
+            remove.textContent = '✕';
+            remove.setAttribute('aria-label', `Remover foto ${index + 1}`);
+            remove.addEventListener('click', () => {
+                photos = photos.filter((_, photoIndex) => photoIndex !== index);
+                renderPhotoList();
+                updatePreview();
+            });
+            wrapper.append(image, remove);
+            list.append(wrapper);
+        });
+    }
+
+    function setPhotos(list) {
+        photos = Array.isArray(list)
+            ? list.filter(src => typeof src === 'string' && src.startsWith('data:image/')).slice(0, MAX_PHOTOS)
+            : [];
+        renderPhotoList();
+    }
+
+    async function addPhotos(files) {
+        const room = MAX_PHOTOS - photos.length;
+        if (room <= 0) {
+            setMessage(`Limite de ${MAX_PHOTOS} fotos por ordem.`, true);
+            return;
+        }
+        try {
+            for (const file of [...files].slice(0, room)) {
+                if (file.type.startsWith('image/')) photos.push(await resizePhoto(file));
+            }
+            if (files.length > room) setMessage(`Só cabem ${MAX_PHOTOS} fotos por ordem; as extras foram ignoradas.`, true);
+        } catch (error) {
+            setMessage(error.message, true);
+        }
+        renderPhotoList();
+        updatePreview();
+    }
+
+    function buildWhatsAppText() {
+        const data = readFormData();
+        const number = document.getElementById('input-os-num').value;
+        const lines = [`*Ordem de Serviço* ${number === OS_NUMBER_PLACEHOLDER ? '' : `nº ${number}`}`.trim()];
+        const add = (label, value) => { if (value) lines.push(`*${label}:* ${value}`); };
+        add('Data', formatDate(data['input-data']));
+        add('Tipo', data['input-tipo']);
+        add('Status', data['input-status']);
+        add('Cliente/local', data['input-local']);
+        add('Solicitante', data['input-solicitante']);
+        add('Serviço', data['input-titulo']);
+        add('Equipamentos', data['input-equipamentos']);
+        add('Diagnóstico', data['input-diagnostico']);
+        add('Procedimentos', data['input-procedimentos']);
+        if (data.budgetItems.length) add('Total', currency.format(getBudgetTotal(data.budgetItems)));
+        return lines.join('\n');
+    }
+
+    async function shareToWhatsApp() {
+        const text = buildWhatsAppText();
+        const files = await Promise.all(photos.map(async (src, index) => {
+            const blob = await (await fetch(src)).blob();
+            return new File([blob], `foto-${index + 1}.jpg`, { type: 'image/jpeg' });
+        }));
+        if (files.length && navigator.canShare?.({ files })) {
+            try {
+                await navigator.share({ text, files });
+                return;
+            } catch (error) {
+                if (error?.name === 'AbortError') return;
+            }
+        }
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+        if (files.length) setMessage('As fotos não podem ser anexadas automaticamente neste aparelho; anexe-as no WhatsApp.');
     }
 
     function getSignatureData(canvasId) {
@@ -136,6 +248,17 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         document.getElementById('prev-budget-total').textContent = total;
         updateSignaturePreview('canvas-tec', 'prev-sig-tec');
         updateSignaturePreview('canvas-cli', 'prev-sig-cli');
+
+        const previewPhotos = document.getElementById('prev-photos');
+        previewPhotos.replaceChildren();
+        for (const src of data.photos) {
+            const image = document.createElement('img');
+            image.src = src;
+            image.alt = 'Foto do serviço';
+            image.className = 'h-28 w-full rounded object-cover';
+            previewPhotos.append(image);
+        }
+        document.getElementById('prev-photos-section').classList.toggle('hidden', !data.photos.length);
     }
 
     function updateSignaturePreview(canvasId, imageId) {
@@ -377,6 +500,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         for (const item of order.data.budgetItems || []) addBudgetItem(item);
         restoreSignature('canvas-tec', order.data.signatures?.technician);
         restoreSignature('canvas-cli', order.data.signatures?.customer);
+        setPhotos(order.data.photos);
         updatePreview();
         showOsNumber(order.osNumber);
         document.querySelector('[data-tab="tab-nova-os"]').click();
@@ -447,6 +571,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         showOsNumber(null);
         document.getElementById('input-data').value = getCurrentDateTime();
         budgetItemsContainer.replaceChildren();
+        setPhotos([]);
         for (const canvasId of ['canvas-tec', 'canvas-cli']) {
             const canvas = document.getElementById(canvasId);
             canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
@@ -487,6 +612,10 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
     updateHistory();
     updatePreview();
     void loadRemoteOrders();
+    document.getElementById('input-photos').addEventListener('change', event => {
+        void addPhotos(event.target.files).then(() => { event.target.value = ''; });
+    });
+    document.getElementById('btn-whatsapp-os').addEventListener('click', () => void shareToWhatsApp());
     document.addEventListener('visibilitychange', refreshOsNumbers);
     setInterval(refreshOsNumbers, 30000);
 }

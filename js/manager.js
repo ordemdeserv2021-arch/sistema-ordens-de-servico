@@ -84,6 +84,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         setViewSignature('view-sig-tec', data.signatures?.technician);
         setViewSignature('view-sig-cli', data.signatures?.customer);
 
+        const photoContainer = document.getElementById('view-photos');
+        photoContainer.replaceChildren();
+        const photos = (Array.isArray(data.photos) ? data.photos : [])
+            .filter(src => typeof src === 'string' && /^data:image\/(jpeg|png);base64,/.test(src));
+        for (const src of photos) {
+            const image = document.createElement('img');
+            image.src = src;
+            image.alt = 'Foto do serviço';
+            image.className = 'h-28 w-full rounded object-cover';
+            photoContainer.append(image);
+        }
+        document.getElementById('view-photos-section').classList.toggle('hidden', !photos.length);
+
         for (const section of dashboardSections()) section.classList.add('hidden');
         document.getElementById('order-viewer').classList.remove('hidden');
         window.scrollTo(0, 0);

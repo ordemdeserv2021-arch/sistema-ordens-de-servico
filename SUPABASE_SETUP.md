@@ -74,7 +74,11 @@ de qualquer ordem na lista. Dois números iguais na mesma empresa são recusados
 o sistema pula números já usados manualmente.
 
 Depois do teste de 30 dias, o gestor ativa a licença informando um código em
-`gestor.html`. Quem administra o sistema gera os códigos (uso único) com:
+`gestor.html`. O administrador do sistema gera os códigos (uso único) em
+`admin.html` (também lista empresas, vencimentos e permite somar dias a uma
+empresa, por exemplo após um Pix confirmado). Só entra quem tiver o e-mail
+configurado na variável de ambiente `ADMIN_EMAIL` (no `.env` e no Vercel, seguido
+de Redeploy). Os códigos também podem ser gerados pelo terminal com:
 
 ```
 npm run licenca -- 30 Nome da empresa

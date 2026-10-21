@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Administração - Sistema de O.S.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+    <main class="mx-auto max-w-5xl space-y-6 p-4 sm:p-8">
+        <header class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold">Administração do sistema</h1>
+                <p class="text-sm text-slate-600">Licenças, clientes e vencimentos.</p>
+            </div>
+            <button id="admin-logout" type="button" class="btn-secondary hidden">Sair</button>
+        </header>
+
+        <section id="admin-auth" class="rounded-xl bg-white p-6 shadow">
+            <h2 class="mb-4 text-lg font-semibold">Acesso do administrador</h2>
+            <form id="admin-auth-form" class="space-y-4">
+                <div>
+                    <label for="admin-email" class="form-label">E-mail</label>
+                    <input id="admin-email" type="email" class="form-input" autocomplete="username" required>
+                </div>
+                <div>
+                    <label for="admin-password" class="form-label">Senha</label>
+                    <input id="admin-password" type="password" class="form-input" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn-primary">Entrar</button>
+                <p id="admin-auth-message" class="min-h-5 text-sm" role="status" aria-live="polite"></p>
+            </form>
+        </section>
+
+        <section id="admin-dashboard" class="hidden space-y-6">
+            <div class="rounded-xl bg-white p-6 shadow">
+                <h2 class="text-lg font-semibold">Gerar código de licença</h2>
+                <form id="code-form" class="mt-3 flex flex-wrap gap-2">
+                    <label for="code-days" class="sr-only">Dias</label>
+                    <input id="code-days" type="number" min="1" max="3660" value="30" class="form-input w-28" required>
+                    <label for="code-note" class="sr-only">Observação</label>
+                    <input id="code-note" class="form-input min-w-64 flex-1" placeholder="Cliente / observação (opcional)" maxlength="200">
+                    <button type="submit" class="btn-primary">Gerar código</button>
+                </form>
+                <p id="code-message" class="mt-3 min-h-5 text-sm" role="status" aria-live="polite"></p>
+                <p id="code-result" class="mt-1 select-all font-mono text-lg font-bold"></p>
+            </div>
+
+            <div class="rounded-xl bg-white p-6 shadow">
+                <h2 class="mb-3 text-lg font-semibold">Empresas</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="border-b text-xs uppercase text-slate-500">
+                            <tr><th class="py-2 pr-3">Empresa</th><th class="pr-3">Gestor</th><th class="pr-3">Situação</th><th class="pr-3">Vence em</th><th class="pr-3">Equipe</th><th class="pr-3">O.S.</th><th>Adicionar dias</th></tr>
+                        </thead>
+                        <tbody id="companies-body"></tbody>
+                    </table>
+                </div>
+                <p id="companies-message" class="mt-3 min-h-5 text-sm" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="rounded-xl bg-white p-6 shadow">
+                <h2 class="mb-3 text-lg font-semibold">Códigos gerados (últimos 100)</h2>
+                <p class="mb-2 text-xs text-slate-500">Por segurança, o código só é exibido no momento em que é gerado.</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="border-b text-xs uppercase text-slate-500">
+                            <tr><th class="py-2 pr-3">Criado em</th><th class="pr-3">Dias</th><th class="pr-3">Observação</th><th>Situação</th></tr>
+                        </thead>
+                        <tbody id="codes-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script type="module" src="js/admin.js"></script>
+</body>
+</html>

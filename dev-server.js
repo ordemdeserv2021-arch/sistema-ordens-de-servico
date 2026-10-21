@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import companyHandler from './api/company.js';
+import adminHandler from './api/admin.js';
 import invitationsHandler from './api/invitations.js';
 import licenseHandler from './api/license.js';
 import membersHandler from './api/members.js';
@@ -12,6 +13,7 @@ const root = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const port = Number(process.env.PORT || 3000);
 const maxBodyBytes = 2_000_000;
 const apiHandlers = new Map([
+    ['/api/admin', adminHandler],
     ['/api/company', companyHandler],
     ['/api/invitations', invitationsHandler],
     ['/api/license', licenseHandler],
@@ -58,7 +60,7 @@ async function parseBody(req) {
 
 function getPublicFile(pathname) {
     if (pathname === '/') return resolve(root, 'index.html');
-    if (!['/index.html', '/gestor.html'].includes(pathname)
+    if (!['/index.html', '/gestor.html', '/admin.html'].includes(pathname)
         && !pathname.startsWith('/css/')
         && !pathname.startsWith('/js/')) {
         return null;

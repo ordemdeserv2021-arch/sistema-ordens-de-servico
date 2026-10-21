@@ -184,6 +184,15 @@
                             <p class="text-right text-sm font-semibold text-slate-700">Total: <span id="budget-total">R$ 0,00</span></p>
                         </section>
 
+                        <section class="space-y-3 border-t border-slate-200 pt-5" aria-labelledby="fotos-heading">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 id="fotos-heading" class="font-semibold text-slate-800">Fotos do serviço (até 6)</h3>
+                                <label for="input-photos" class="btn-secondary cursor-pointer"><i class="fa-solid fa-camera mr-1"></i> Adicionar fotos</label>
+                                <input id="input-photos" type="file" accept="image/*" multiple class="sr-only">
+                            </div>
+                            <div id="photo-list" class="grid grid-cols-3 gap-2 sm:grid-cols-6"></div>
+                        </section>
+
                         <section class="space-y-4 border-t border-slate-200 pt-5" aria-labelledby="assinaturas-heading">
                             <h3 id="assinaturas-heading" class="font-semibold text-slate-800">Assinaturas</h3>
                             <div class="grid gap-4 sm:grid-cols-2">
@@ -203,6 +212,7 @@
                         <div class="flex flex-wrap gap-2 border-t border-slate-200 pt-5">
                             <button type="submit" class="btn-primary"><i class="fa-solid fa-floppy-disk mr-1"></i> Salvar rascunho</button>
                             <button id="btn-print-os" type="button" class="btn-secondary"><i class="fa-solid fa-print mr-1"></i> Imprimir</button>
+                            <button id="btn-whatsapp-os" type="button" class="btn-secondary"><i class="fa-brands fa-whatsapp mr-1"></i> Enviar ao WhatsApp</button>
                             <button id="btn-reset-os" type="button" class="btn-secondary">Limpar formulário</button>
                         </div>
                         <p id="form-message" class="min-h-5 text-sm" role="status" aria-live="polite"></p>
@@ -233,6 +243,7 @@
                             <section><h2 class="font-bold">Diagnóstico / solicitação</h2><p id="prev-diagnostico" class="mt-1 whitespace-pre-wrap">—</p></section>
                             <section><h2 class="font-bold">Procedimentos realizados</h2><p id="prev-procedimentos" class="mt-1 whitespace-pre-wrap">—</p></section>
                             <section><h2 class="font-bold">Materiais e orçamento</h2><div id="prev-budget-items" class="mt-1"></div><p class="mt-1 text-right font-bold">Total: <span id="prev-budget-total">R$ 0,00</span></p></section>
+                        <section id="prev-photos-section" class="hidden"><h2 class="font-bold">Fotos do serviço</h2><div id="prev-photos" class="mt-1 grid grid-cols-3 gap-2"></div></section>
                         </div>
                         <div class="mt-8 grid grid-cols-2 gap-8 text-center text-xs">
                             <div class="border-t border-slate-500 pt-2"><img id="prev-sig-tec" class="signature-preview mx-auto hidden" alt="Assinatura do técnico"><span>Técnico responsável</span></div>

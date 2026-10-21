@@ -1,6 +1,5 @@
-import { randomBytes } from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
-import { hashLicenseCode } from '../api/_lib/license.js';
+import { generateLicenseCode, hashLicenseCode } from '../api/_lib/license.js';
 
 const days = Number.parseInt(process.argv[2], 10);
 const note = process.argv.slice(3).join(' ').trim() || null;
@@ -14,9 +13,7 @@ if (!process.env.DATABASE_URL) {
     process.exit(1);
 }
 
-const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const raw = Array.from(randomBytes(16), byte => alphabet[byte % alphabet.length]).join('');
-const code = raw.match(/.{4}/g).join('-');
+const code = generateLicenseCode();
 
 const sql = neon(process.env.DATABASE_URL);
 await sql`
