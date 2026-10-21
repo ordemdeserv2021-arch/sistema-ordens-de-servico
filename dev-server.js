@@ -58,7 +58,7 @@ function getPublicFile(pathname) {
     if (pathname === '/') return resolve(root, 'index.html');
     if (!['/index.html', '/gestor.html'].includes(pathname)
         && !pathname.startsWith('/css/')
-        && !pathname.startsWith('/api/js/')) {
+        && !pathname.startsWith('/js/')) {
         return null;
     }
     const filePath = resolve(root, `.${pathname}`);

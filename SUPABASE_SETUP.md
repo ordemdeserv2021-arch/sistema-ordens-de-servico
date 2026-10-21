@@ -10,7 +10,7 @@ cliente.
 2. Em **Better Auth**, clique em **Enable Auth** e conclua a configuração.
 3. Na aba **Configuration**, copie a **Auth Base URL**.
 4. Configure a **Auth Base URL** uma única vez como `DEFAULT_NEON_AUTH_URL` em
-   `api/js/config.js` antes de publicar. A URL é pública e não é a senha nem a
+   `js/config.js` antes de publicar. A URL é pública e não é a senha nem a
    string de conexão do banco. Uma URL já salva no navegador continua sendo
    aceita durante esta transição.
 5. Em **Settings → Better Auth**, habilite **Sign-up with Email** e **Verify at
