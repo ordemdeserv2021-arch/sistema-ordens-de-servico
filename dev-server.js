@@ -4,6 +4,7 @@ import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import companyHandler from './api/company.js';
 import adminHandler from './api/admin.js';
+import locationsHandler from './api/locations.js';
 import invitationsHandler from './api/invitations.js';
 import licenseHandler from './api/license.js';
 import membersHandler from './api/members.js';
@@ -17,6 +18,7 @@ const apiHandlers = new Map([
     ['/api/company', companyHandler],
     ['/api/invitations', invitationsHandler],
     ['/api/license', licenseHandler],
+    ['/api/locations', locationsHandler],
     ['/api/members', membersHandler],
     ['/api/orders', ordersHandler]
 ]);

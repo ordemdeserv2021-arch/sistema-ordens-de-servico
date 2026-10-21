@@ -136,6 +136,26 @@ create table if not exists public.license_codes (
     redeemed_company_id uuid references public.companies (id) on delete set null
 );
 
+create table if not exists public.company_locations (
+    id uuid primary key default gen_random_uuid(),
+    company_id uuid not null references public.companies (id) on delete cascade,
+    user_id text not null,
+    name text not null check (length(trim(name)) between 1 and 120),
+    prefix text check (prefix is null or prefix ~ '^[A-Za-z0-9]{1,10}$'),
+    next_number bigint check (next_number is null or next_number >= 0),
+    created_at timestamptz not null default now()
+);
+
+create unique index if not exists company_locations_unique_name_idx
+    on public.company_locations (company_id, user_id, lower(name));
+create index if not exists company_locations_user_idx
+    on public.company_locations (company_id, user_id);
+
+alter table public.service_orders add column if not exists location_id uuid
+    references public.company_locations (id) on delete set null;
+create index if not exists service_orders_company_user_idx
+    on public.service_orders (company_id, created_by, updated_at desc);
+
 alter table public.companies enable row level security;
 alter table public.company_members enable row level security;
 alter table public.license_codes enable row level security;

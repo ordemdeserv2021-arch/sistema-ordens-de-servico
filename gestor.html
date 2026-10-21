@@ -123,13 +123,13 @@
             </div>
 
             <div class="rounded-xl bg-white p-6 shadow">
-                <h2 class="mb-3 text-lg font-semibold">Equipe</h2>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold">Colaboradores</h2>
+                    <label class="sr-only" for="member-search">Buscar colaborador</label>
+                    <input id="member-search" type="search" class="form-input max-w-xs" placeholder="Buscar por nome ou e-mail">
+                </div>
+                <p id="member-count" class="my-2 text-xs text-slate-500"></p>
                 <div id="company-members" class="space-y-2 text-sm"></div>
-            </div>
-
-            <div class="rounded-xl bg-white p-6 shadow">
-                <h2 class="mb-3 text-lg font-semibold">Ordens da empresa</h2>
-                <div id="company-orders" class="space-y-2 text-sm"></div>
             </div>
 
             <div id="order-viewer" class="hidden space-y-3">

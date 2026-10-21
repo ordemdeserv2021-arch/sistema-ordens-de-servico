@@ -105,7 +105,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     function closeOrderViewer() {
         document.getElementById('order-viewer').classList.add('hidden');
         for (const section of dashboardSections()) section.classList.remove('hidden');
-        loadCompany();
     }
 
     async function loadCompany() {
@@ -155,35 +154,229 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!hasAccess) {
             const membersContainer = document.getElementById('company-members');
             membersContainer.textContent = 'O período de acesso terminou. Fale com o administrador do sistema para renovar.';
-            document.getElementById('company-orders').textContent =
-                'A consulta das ordens está suspensa até a regularização do acesso.';
+            document.getElementById('member-count').textContent = '';
             return;
         }
 
+        await loadMembers(company);
+    }
+
+    let members = [];
+    let companyName = '';
+
+    function makeEl(tag, className = '', text = '') {
+        const element = document.createElement(tag);
+        if (className) element.className = className;
+        if (text) element.textContent = text;
+        return element;
+    }
+
+    async function loadMembers(company) {
+        companyName = company.name;
         const membersContainer = document.getElementById('company-members');
         try {
-            const { members } = await apiRequest('/api/members');
-            membersContainer.replaceChildren();
-            for (const member of members) {
-                const row = document.createElement('p');
-                row.className = 'rounded border border-slate-200 p-3';
-                row.textContent = `${member.name} — ${member.email} (${member.role === 'manager' ? 'gestor' : 'colaborador'})`;
-                membersContainer.append(row);
-            }
+            ({ members } = await apiRequest('/api/members'));
+            renderMembers();
         } catch (error) {
             console.error('Não foi possível carregar os colaboradores:', error);
             membersContainer.textContent = `Não foi possível carregar a equipe: ${error.message}`;
         }
+    }
 
-        const ordersContainer = document.getElementById('company-orders');
-        try {
-            const { orders } = await apiRequest(`/api/orders?companyId=${encodeURIComponent(company.id)}`);
-            ordersContainer.replaceChildren();
-            if (!orders.length) {
-                ordersContainer.textContent = 'Ainda não há ordens de serviço cadastradas.';
-                return;
+    function renderMembers() {
+        const container = document.getElementById('company-members');
+        const term = document.getElementById('member-search').value.trim().toLowerCase();
+        const visible = members.filter(member =>
+            !term || `${member.name} ${member.email}`.toLowerCase().includes(term));
+        container.replaceChildren();
+        document.getElementById('member-count').textContent =
+            `${visible.length} de ${members.length} ${members.length === 1 ? 'pessoa' : 'pessoas'}`;
+        if (!visible.length) {
+            container.textContent = 'Nenhum colaborador encontrado.';
+            return;
+        }
+        for (const member of visible) container.append(buildMemberCard(member));
+    }
+
+    function buildMemberCard(member) {
+        const card = makeEl('article', 'rounded border border-slate-200');
+        const header = makeEl('div', 'flex flex-wrap items-center justify-between gap-3 p-3');
+        const info = makeEl('div');
+        info.append(
+            makeEl('p', 'font-medium', member.name || member.email),
+            makeEl('p', 'text-xs text-slate-600',
+                `${member.email} · ${member.role === 'manager' ? 'gestor' : 'colaborador'}`)
+        );
+        const toggle = makeEl('button', 'btn-secondary', 'Gerenciar');
+        toggle.type = 'button';
+        toggle.setAttribute('aria-expanded', 'false');
+        const panel = makeEl('div', 'hidden space-y-5 border-t border-slate-200 p-3');
+        let loaded = false;
+        toggle.addEventListener('click', () => {
+            const open = panel.classList.toggle('hidden') === false;
+            toggle.textContent = open ? 'Fechar' : 'Gerenciar';
+            toggle.setAttribute('aria-expanded', String(open));
+            if (open && !loaded) {
+                loaded = true;
+                buildMemberPanel(member, panel);
             }
-            for (const order of orders) {
+        });
+        header.append(info, toggle);
+        card.append(header, panel);
+        return card;
+    }
+
+    function buildMemberPanel(member, panel) {
+        const locationsSection = makeEl('section', 'space-y-2');
+        locationsSection.append(makeEl('h3', 'font-semibold', 'Locais de preventiva'));
+        locationsSection.append(makeEl('p', 'text-xs text-slate-600',
+            'Cada local tem a sua numeração (com prefixo opcional). Sem contador no local, vale a numeração geral da empresa.'));
+        const locationList = makeEl('div', 'space-y-2');
+        const addForm = makeEl('form', 'flex flex-wrap items-center gap-2');
+        const nameInput = makeEl('input', 'form-input min-w-40 flex-1');
+        nameInput.placeholder = 'Nome do local / cliente';
+        nameInput.maxLength = 120;
+        nameInput.required = true;
+        const prefixInput = makeEl('input', 'form-input w-28');
+        prefixInput.placeholder = 'Prefixo';
+        prefixInput.maxLength = 10;
+        const startInput = makeEl('input', 'form-input w-32');
+        startInput.type = 'number';
+        startInput.min = '0';
+        startInput.placeholder = 'Nº inicial';
+        const addButton = makeEl('button', 'btn-primary', 'Adicionar local');
+        addButton.type = 'submit';
+        addForm.append(nameInput, prefixInput, startInput, addButton);
+        const locationMessage = makeEl('p', 'min-h-5 text-xs');
+        locationMessage.setAttribute('role', 'status');
+        locationsSection.append(locationList, addForm, locationMessage);
+
+        const ordersSection = makeEl('section', 'space-y-2');
+        const ordersHeader = makeEl('div', 'flex flex-wrap items-center justify-between gap-2');
+        ordersHeader.append(makeEl('h3', 'font-semibold', 'Ordens de serviço'));
+        const filter = makeEl('select', 'form-input w-auto');
+        filter.setAttribute('aria-label', 'Filtrar ordens por local');
+        ordersHeader.append(filter);
+        const orderList = makeEl('div', 'space-y-2');
+        ordersSection.append(ordersHeader, orderList);
+        panel.append(locationsSection, ordersSection);
+
+        async function loadOrders() {
+            orderList.textContent = 'Carregando…';
+            try {
+                const query = new URLSearchParams({ userId: member.id });
+                if (filter.value) query.set('locationId', filter.value);
+                const { orders } = await apiRequest(`/api/orders?${query}`);
+                orderList.replaceChildren();
+                if (!orders.length) {
+                    orderList.textContent = 'Nenhuma ordem de serviço encontrada.';
+                    return;
+                }
+                for (const order of orders) orderList.append(buildOrderRow(order));
+            } catch (error) {
+                orderList.textContent = `Não foi possível carregar as ordens: ${error.message}`;
+            }
+        }
+
+        async function loadLocations() {
+            try {
+                const { locations } = await apiRequest(`/api/locations?userId=${encodeURIComponent(member.id)}`);
+                const selected = filter.value;
+                filter.replaceChildren(new Option('Todos os locais', ''));
+                locationList.replaceChildren();
+                if (!locations.length) locationList.append(makeEl('p', 'text-xs text-slate-500', 'Nenhum local cadastrado.'));
+                for (const location of locations) {
+                    filter.append(new Option(location.name, location.id));
+                    locationList.append(buildLocationRow(location));
+                }
+                filter.value = locations.some(location => location.id === selected) ? selected : '';
+            } catch (error) {
+                setMessage(locationMessage, error.message, true);
+            }
+        }
+
+        function buildLocationRow(location) {
+            const form = makeEl('form', 'flex flex-wrap items-center gap-2');
+            const name = makeEl('input', 'form-input min-w-40 flex-1');
+            name.value = location.name;
+            name.maxLength = 120;
+            name.required = true;
+            name.setAttribute('aria-label', 'Nome do local');
+            const prefix = makeEl('input', 'form-input w-28');
+            prefix.value = location.prefix || '';
+            prefix.maxLength = 10;
+            prefix.placeholder = 'Prefixo';
+            prefix.setAttribute('aria-label', 'Prefixo');
+            const next = makeEl('input', 'form-input w-32');
+            next.type = 'number';
+            next.min = '0';
+            next.value = location.nextNumber ?? '';
+            next.placeholder = 'Próximo nº';
+            next.setAttribute('aria-label', 'Próximo número');
+            const save = makeEl('button', 'btn-secondary', 'Salvar');
+            save.type = 'submit';
+            const remove = makeEl('button', 'btn-secondary', 'Excluir');
+            remove.type = 'button';
+            form.append(name, prefix, next, save, remove);
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                save.disabled = true;
+                try {
+                    await apiRequest('/api/locations', {
+                        method: 'PATCH',
+                        body: { id: location.id, name: name.value, prefix: prefix.value, nextNumber: next.value }
+                    });
+                    setMessage(locationMessage, 'Local salvo.');
+                    await loadLocations();
+                } catch (error) {
+                    setMessage(locationMessage, error.message, true);
+                } finally {
+                    save.disabled = false;
+                }
+            });
+            remove.addEventListener('click', async () => {
+                if (!confirm(`Excluir o local "${location.name}"? As ordens já criadas continuam com os números atuais.`)) return;
+                try {
+                    await apiRequest('/api/locations', { method: 'DELETE', body: { id: location.id } });
+                    setMessage(locationMessage, 'Local excluído.');
+                    await loadLocations();
+                    await loadOrders();
+                } catch (error) {
+                    setMessage(locationMessage, error.message, true);
+                }
+            });
+            return form;
+        }
+
+        addForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            addButton.disabled = true;
+            try {
+                await apiRequest('/api/locations', {
+                    method: 'POST',
+                    body: {
+                        userId: member.id,
+                        name: nameInput.value,
+                        prefix: prefixInput.value,
+                        nextNumber: startInput.value
+                    }
+                });
+                addForm.reset();
+                setMessage(locationMessage, 'Local adicionado.');
+                await loadLocations();
+            } catch (error) {
+                setMessage(locationMessage, error.message, true);
+            } finally {
+                addButton.disabled = false;
+            }
+        });
+        filter.addEventListener('change', loadOrders);
+
+        void loadLocations();
+        void loadOrders();
+    }
+
+    function buildOrderRow(order) {
                 const row = document.createElement('article');
                 row.className = 'flex flex-wrap items-center justify-between gap-3 rounded border border-slate-200 p-3';
                 const details = document.createElement('div');
@@ -192,7 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 title.textContent = `${order.osNumber ? `O.S. ${order.osNumber} — ` : ''}${order.data['input-titulo'] || 'Ordem sem título'}`;
                 const summary = document.createElement('p');
                 summary.className = 'text-sm text-slate-600';
-                summary.textContent = `${order.data['input-local'] || 'Sem cliente/local'} · ${order.data['input-solicitante'] || 'Sem solicitante'} · ${order.createdBy?.name || order.createdBy?.email || 'Colaborador'} · ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(order.updatedAt))}`;
+                summary.textContent = `${order.locationName ? `${order.locationName} · ` : ''}${order.data['input-local'] || 'Sem cliente/local'} · ${order.data['input-solicitante'] || 'Sem solicitante'} · ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(order.updatedAt))}`;
                 details.append(title, summary);
 
                 const numberForm = document.createElement('form');
@@ -233,17 +426,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 openLink.type = 'button';
                 openLink.className = 'btn-secondary';
                 openLink.textContent = 'Ver ordem';
-                openLink.addEventListener('click', () => showOrder(order, company.name));
+                openLink.addEventListener('click', async () => {
+                    openLink.disabled = true;
+                    try {
+                        const { orders } = await apiRequest(`/api/orders?id=${encodeURIComponent(order.id)}`);
+                        if (!orders.length) throw new Error('A ordem não foi encontrada.');
+                        showOrder(orders[0], companyName);
+                    } catch (error) {
+                        setMessage(numberMessage, error.message || 'Não foi possível abrir a ordem.', true);
+                    } finally {
+                        openLink.disabled = false;
+                    }
+                });
                 const actions = document.createElement('div');
                 actions.className = 'flex flex-wrap items-center gap-2';
                 actions.append(numberForm, openLink);
                 row.append(details, actions);
-                ordersContainer.append(row);
-            }
-        } catch (error) {
-            console.error('Não foi possível carregar as ordens da empresa:', error);
-            ordersContainer.textContent = `Não foi possível carregar as ordens: ${error.message}`;
-        }
+                return row;
     }
 
     async function createCompany() {
@@ -367,6 +566,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('create-company').addEventListener('click', createCompany);
     document.getElementById('order-viewer-back').addEventListener('click', closeOrderViewer);
+    document.getElementById('member-search').addEventListener('input', renderMembers);
     document.getElementById('order-viewer-print').addEventListener('click', () => window.print());
 
     document.getElementById('license-form').addEventListener('submit', async event => {

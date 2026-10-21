@@ -32,6 +32,37 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
     let activeOrderId = null;
     let storageAvailable = true;
     const syncedOrderIds = new Set();
+    const locationSelect = document.getElementById('input-location');
+    let locations = [];
+
+    function applyLocationState(order) {
+        const field = document.getElementById('location-field');
+        const wanted = order?.locationId || '';
+        const known = locations.some(location => location.id === wanted);
+        locationSelect.value = known ? wanted : '';
+        const locked = Boolean(order && syncedOrderIds.has(order.id));
+        locationSelect.disabled = locked;
+        locationSelect.required = locations.length > 0 && !locked;
+        field.classList.toggle('hidden', !locations.length);
+    }
+
+    async function loadLocations() {
+        try {
+            const result = await apiRequest('/api/locations');
+            locations = Array.isArray(result.locations) ? result.locations : [];
+        } catch (error) {
+            console.error('Não foi possível carregar os locais:', error);
+            return;
+        }
+        locationSelect.replaceChildren(new Option('Selecione o local…', ''));
+        for (const location of locations) {
+            locationSelect.append(new Option(
+                location.prefix ? `${location.name} (${location.prefix})` : location.name,
+                location.id
+            ));
+        }
+        applyLocationState(orders.find(order => order.id === activeOrderId) || null);
+    }
 
     function setMessage(text, isError = false) {
         message.textContent = text;
@@ -375,9 +406,15 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         try {
             const result = await apiRequest('/api/orders', {
                 method: 'POST',
-                body: { id: order.id, data: order.data }
+                body: { id: order.id, data: order.data, locationId: order.locationId || null }
             });
             syncedOrderIds.add(order.id);
+            if (result?.order?.locationId && result.order.locationId !== order.locationId) {
+                order.locationId = result.order.locationId;
+                orders = orders.map(item => item.id === order.id ? { ...item, locationId: order.locationId } : item);
+                persistOrders();
+            }
+            if (activeOrderId === order.id) applyLocationState(order);
             const assigned = result?.order?.osNumber;
             if (assigned && assigned !== order.osNumber) {
                 order.osNumber = assigned;
@@ -406,7 +443,11 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
             for (const order of orders) {
                 const remote = merged.get(order.id);
                 if (!remote || new Date(order.updatedAt).getTime() > new Date(remote.updatedAt).getTime()) {
-                    merged.set(order.id, { ...order, osNumber: remote?.osNumber ?? order.osNumber });
+                    merged.set(order.id, {
+                        ...order,
+                        osNumber: remote?.osNumber ?? order.osNumber,
+                        locationId: remote?.locationId ?? order.locationId
+                    });
                 }
             }
             orders = [...merged.values()].sort((left, right) =>
@@ -469,6 +510,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
                 : `${Date.now()}-${Math.random().toString(36).slice(2)}`),
             data: readFormData(),
             osNumber: orders[existingIndex]?.osNumber,
+            locationId: locationSelect.value || orders[existingIndex]?.locationId || null,
             updatedAt: new Date().toISOString()
         };
 
@@ -501,6 +543,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         restoreSignature('canvas-tec', order.data.signatures?.technician);
         restoreSignature('canvas-cli', order.data.signatures?.customer);
         setPhotos(order.data.photos);
+        applyLocationState(order);
         updatePreview();
         showOsNumber(order.osNumber);
         document.querySelector('[data-tab="tab-nova-os"]').click();
@@ -572,6 +615,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         document.getElementById('input-data').value = getCurrentDateTime();
         budgetItemsContainer.replaceChildren();
         setPhotos([]);
+        applyLocationState(null);
         for (const canvasId of ['canvas-tec', 'canvas-cli']) {
             const canvas = document.getElementById(canvasId);
             canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
@@ -611,6 +655,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
     orders = readOrders();
     updateHistory();
     updatePreview();
+    void loadLocations();
     void loadRemoteOrders();
     document.getElementById('input-photos').addEventListener('change', event => {
         void addPhotos(event.target.files).then(() => { event.target.value = ''; });

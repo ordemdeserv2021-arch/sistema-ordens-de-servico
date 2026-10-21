@@ -64,6 +64,23 @@ consulta e altera as ordens da empresa; cada colaborador consulta e altera as
 ordens que criou. A API valida o JWT do Neon Auth e verifica o vínculo e o
 estado da assinatura em cada operação.
 
+## Colaboradores, locais de preventiva e numeração por local
+
+Em `gestor.html`, a lista "Colaboradores" tem busca por nome/e-mail e cada pessoa
+abre em um cartão ("Gerenciar") com:
+
+- **Locais de preventiva** (tabela `company_locations`): nome, prefixo opcional
+  (até 10 letras/números, ex.: `ABC`) e o próximo número. Cada local tem seu
+  contador; a O.S. do colaborador nesse local sai como `ABC-1001`, `ABC-1002`…
+  Local sem contador usa a numeração geral da empresa.
+- **Ordens do colaborador**, filtráveis por local, com "Ver ordem" (somente
+  leitura) e correção manual do número. A lista do gestor não traz fotos nem
+  assinaturas; elas só são carregadas ao abrir a ordem.
+
+O colaborador escolhe o local ao criar a O.S. (campo "Local da preventiva", só
+aparece se o gestor cadastrou locais para ele). A escolha fica travada depois de
+salva, porque define a sequência de numeração.
+
 ## Número da O.S. e licenças
 
 O número da O.S. é definido apenas pelo gestor; o colaborador vê o número somente
