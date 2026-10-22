@@ -322,27 +322,12 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         }
         for (const item of savedItems) {
             const row = document.createElement('div');
-            row.className = 'flex items-center gap-2';
             const use = document.createElement('button');
             use.type = 'button';
-            use.className = 'btn-secondary flex-1 text-left';
+            use.className = 'btn-secondary w-full text-left';
             use.textContent = item.name;
             use.addEventListener('click', () => addBudgetItem({ description: item.name }));
-            const remove = document.createElement('button');
-            remove.type = 'button';
-            remove.className = 'rounded p-2 text-slate-500 hover:bg-red-50 hover:text-red-700';
-            remove.setAttribute('aria-label', `Excluir ${item.name} dos itens salvos`);
-            remove.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i>';
-            remove.addEventListener('click', async () => {
-                try {
-                    await apiRequest('/api/items', { method: 'DELETE', body: { id: item.id } });
-                    savedItems = savedItems.filter(saved => saved.id !== item.id);
-                    renderSavedItems();
-                } catch (error) {
-                    setMessage(error.message || 'Não foi possível excluir o item.', true);
-                }
-            });
-            row.append(use, remove);
+            row.append(use);
             savedItemsList.append(row);
         }
     }
