@@ -186,6 +186,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : `Período de teste até ${dateFormat.format(new Date(company.trial_ends_at))}.`)
             : 'Acesso encerrado.';
 
+        const expiresAt = company.subscription_status === 'active' && company.paid_until
+            ? new Date(company.paid_until)
+            : new Date(company.trial_ends_at);
+        const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
+        const licenseAlert = document.getElementById('license-alert');
+        licenseAlert.classList.toggle('hidden', !(daysLeft <= 15));
+        if (daysLeft <= 15) {
+            document.getElementById('license-alert-title').textContent = daysLeft > 0
+                ? 'Sua licença está prestes a expirar'
+                : 'Sua licença expirou';
+            document.getElementById('license-alert-text').textContent = daysLeft > 0
+                ? `Faltam ${daysLeft} ${daysLeft === 1 ? 'dia' : 'dias'} (até ${dateFormat.format(expiresAt)}). Para continuar com os benefícios, entre em contato com o administrador.`
+                : 'Para voltar a usar o sistema, entre em contato com o administrador.';
+        }
+
         document.getElementById('invite-panel').classList.toggle('hidden', !hasAccess);
         const nextNumber = company.os_next_number;
         document.getElementById('numbering-status').textContent = nextNumber === null || nextNumber === undefined

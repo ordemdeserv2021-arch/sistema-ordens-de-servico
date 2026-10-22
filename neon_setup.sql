@@ -163,8 +163,8 @@ create table if not exists public.saved_items (
     name text not null check (char_length(name) between 1 and 160),
     created_at timestamptz not null default now()
 );
-create unique index if not exists saved_items_unique
-    on public.saved_items (company_id, user_id, lower(name));
+create unique index if not exists saved_items_company_unique
+    on public.saved_items (company_id, lower(name));
 
 alter table public.service_orders add column if not exists location_id uuid
     references public.company_locations (id) on delete set null;
