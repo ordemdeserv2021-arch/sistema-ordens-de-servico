@@ -71,16 +71,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const budgetContainer = document.getElementById('view-budget-items');
         budgetContainer.replaceChildren();
-        let total = 0;
         for (const item of Array.isArray(data.budgetItems) ? data.budgetItems : []) {
             const quantity = Number(item.quantity) || 0;
             const unitPrice = Number(item.unitPrice) || 0;
-            total += quantity * unitPrice;
             const line = document.createElement('p');
-            line.textContent = `${item.description} — ${quantity} x ${currency.format(unitPrice)}`;
+            line.textContent = `${item.description} — ${quantity}${unitPrice ? ` x ${currency.format(unitPrice)}` : ''}`;
             budgetContainer.append(line);
         }
-        document.getElementById('view-budget-total').textContent = currency.format(total);
+        setViewText('view-logistica-dias', data['input-logistica-dias']);
+        setViewText('view-logistica-insumos', data['input-logistica-insumos']);
+        setViewText('view-logistica-ferramentas', data['input-logistica-ferramentas']);
+        document.getElementById('view-logistica-section').classList.toggle('hidden',
+            !(data['input-logistica-dias'] || data['input-logistica-insumos'] || data['input-logistica-ferramentas']));
         setViewSignature('view-sig-tec', data.signatures?.technician);
         setViewSignature('view-sig-cli', data.signatures?.customer);
 

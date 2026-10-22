@@ -182,13 +182,28 @@
 
                         <section class="space-y-3 border-t border-slate-200 pt-5" aria-labelledby="orcamento-heading">
                             <div class="flex items-center justify-between gap-3">
-                                <h3 id="orcamento-heading" class="font-semibold text-slate-800">Materiais e orçamento (opcional)</h3>
+                                <h3 id="orcamento-heading" class="font-semibold text-slate-800">Itens / materiais (opcional)</h3>
                                 <button id="btn-add-budget-item" type="button" class="btn-secondary">
                                     <i class="fa-solid fa-plus mr-1"></i> Adicionar item
                                 </button>
                             </div>
                             <div id="budget-items" class="space-y-2"></div>
-                            <p class="text-right text-sm font-semibold text-slate-700">Total: <span id="budget-total">R$ 0,00</span></p>
+                        </section>
+
+                        <section class="space-y-3 border-t border-slate-200 pt-5" aria-labelledby="logistica-heading">
+                            <h3 id="logistica-heading" class="font-semibold text-slate-800">Logística (opcional)</h3>
+                            <div>
+                                <label for="input-logistica-dias" class="form-label">Dias para execução da obra</label>
+                                <input id="input-logistica-dias" type="text" maxlength="120" class="form-input" placeholder="Ex.: 5 dias úteis, de 10/11 a 14/11">
+                            </div>
+                            <div>
+                                <label for="input-logistica-insumos" class="form-label">Insumos a serem empregados</label>
+                                <textarea id="input-logistica-insumos" rows="3" class="form-input" placeholder="Cabos, conectores, parafusos, etc."></textarea>
+                            </div>
+                            <div>
+                                <label for="input-logistica-ferramentas" class="form-label">Ferramentas a serem empregadas</label>
+                                <textarea id="input-logistica-ferramentas" rows="3" class="form-input" placeholder="Furadeira, escada, alicate, etc."></textarea>
+                            </div>
                         </section>
 
                         <section class="space-y-3 border-t border-slate-200 pt-5" aria-labelledby="fotos-heading">
@@ -249,7 +264,13 @@
                             <section><h2 class="font-bold">Equipamentos</h2><p id="prev-equipamentos" class="mt-1 whitespace-pre-wrap">—</p></section>
                             <section><h2 class="font-bold">Diagnóstico / solicitação</h2><p id="prev-diagnostico" class="mt-1 whitespace-pre-wrap">—</p></section>
                             <section><h2 class="font-bold">Procedimentos realizados</h2><p id="prev-procedimentos" class="mt-1 whitespace-pre-wrap">—</p></section>
-                            <section><h2 class="font-bold">Materiais e orçamento</h2><div id="prev-budget-items" class="mt-1"></div><p class="mt-1 text-right font-bold">Total: <span id="prev-budget-total">R$ 0,00</span></p></section>
+                            <section><h2 class="font-bold">Itens / materiais</h2><div id="prev-budget-items" class="mt-1"></div></section>
+                            <section id="prev-logistica-section" class="hidden">
+                                <h2 class="font-bold">Logística</h2>
+                                <p class="mt-1"><strong>Dias para execução:</strong> <span id="prev-logistica-dias">—</span></p>
+                                <p class="mt-1"><strong>Insumos:</strong> <span id="prev-logistica-insumos" class="whitespace-pre-wrap">—</span></p>
+                                <p class="mt-1"><strong>Ferramentas:</strong> <span id="prev-logistica-ferramentas" class="whitespace-pre-wrap">—</span></p>
+                            </section>
                         <section id="prev-photos-section" class="hidden"><h2 class="font-bold">Fotos do serviço</h2><div id="prev-photos" class="mt-1 grid grid-cols-3 gap-2"></div></section>
                         </div>
                         <div class="mt-8 grid grid-cols-2 gap-8 text-center text-xs">

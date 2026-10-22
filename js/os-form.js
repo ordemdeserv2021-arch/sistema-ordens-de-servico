@@ -10,7 +10,10 @@ const fieldIds = [
     'input-titulo',
     'input-equipamentos',
     'input-diagnostico',
-    'input-procedimentos'
+    'input-procedimentos',
+    'input-logistica-dias',
+    'input-logistica-insumos',
+    'input-logistica-ferramentas'
 ];
 
 const currency = new Intl.NumberFormat('pt-BR', {
@@ -110,7 +113,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         data.budgetItems = [...budgetItemsContainer.querySelectorAll('.budget-row')].map(row => ({
             description: row.querySelector('[data-budget-description]').value.trim(),
             quantity: Number(row.querySelector('[data-budget-quantity]').value) || 0,
-            unitPrice: Number(row.querySelector('[data-budget-price]').value) || 0
+            unitPrice: Number(row.dataset.unitPrice) || 0
         })).filter(item => item.description);
         data.signatures = {
             technician: getSignatureData('canvas-tec'),
@@ -209,7 +212,12 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         add('Equipamentos', data['input-equipamentos']);
         add('Diagnóstico', data['input-diagnostico']);
         add('Procedimentos', data['input-procedimentos']);
-        if (data.budgetItems.length) add('Total', currency.format(getBudgetTotal(data.budgetItems)));
+        if (data.budgetItems.length) {
+            add('Itens', data.budgetItems.map(item => `${item.description} (${item.quantity})`).join('; '));
+        }
+        add('Dias para execução', data['input-logistica-dias']);
+        add('Insumos', data['input-logistica-insumos']);
+        add('Ferramentas', data['input-logistica-ferramentas']);
         return lines.join('\n');
     }
 
@@ -244,10 +252,6 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
             : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
     }
 
-    function getBudgetTotal(items) {
-        return items.reduce((total, item) => total + item.quantity * item.unitPrice, 0);
-    }
-
     function updatePreview() {
         const data = readFormData();
         const previewValues = {
@@ -270,13 +274,15 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         previewBudget.replaceChildren();
         for (const item of data.budgetItems) {
             const line = document.createElement('p');
-            line.textContent = `${item.description} — ${item.quantity} x ${currency.format(item.unitPrice)}`;
+            line.textContent = `${item.description} — ${item.quantity}${item.unitPrice ? ` x ${currency.format(item.unitPrice)}` : ''}`;
             previewBudget.append(line);
         }
 
-        const total = currency.format(getBudgetTotal(data.budgetItems));
-        document.getElementById('budget-total').textContent = total;
-        document.getElementById('prev-budget-total').textContent = total;
+        document.getElementById('prev-logistica-dias').textContent = data['input-logistica-dias'] || '—';
+        document.getElementById('prev-logistica-insumos').textContent = data['input-logistica-insumos'] || '—';
+        document.getElementById('prev-logistica-ferramentas').textContent = data['input-logistica-ferramentas'] || '—';
+        document.getElementById('prev-logistica-section').classList.toggle('hidden',
+            !(data['input-logistica-dias'] || data['input-logistica-insumos'] || data['input-logistica-ferramentas']));
         updateSignaturePreview('canvas-tec', 'prev-sig-tec');
         updateSignaturePreview('canvas-cli', 'prev-sig-cli');
 
@@ -373,15 +379,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         quantity.setAttribute('aria-label', 'Quantidade');
         quantity.dataset.budgetQuantity = '';
 
-        const price = document.createElement('input');
-        price.type = 'number';
-        price.className = 'form-input';
-        price.min = '0';
-        price.step = '0.01';
-        price.placeholder = '0,00';
-        price.value = item.unitPrice ? String(item.unitPrice) : '';
-        price.setAttribute('aria-label', 'Valor unitário');
-        price.dataset.budgetPrice = '';
+        if (item.unitPrice) row.dataset.unitPrice = String(item.unitPrice);
 
         const removeButton = document.createElement('button');
         removeButton.type = 'button';
@@ -393,11 +391,11 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
             updatePreview();
         });
 
-        for (const input of [description, quantity, price]) {
+        for (const input of [description, quantity]) {
             input.addEventListener('input', updatePreview);
         }
 
-        row.append(description, quantity, price, removeButton);
+        row.append(description, quantity, removeButton);
         budgetItemsContainer.append(row);
         updatePreview();
     }
