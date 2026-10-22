@@ -112,8 +112,37 @@ body {
     }
 }
 
+#export-sheets {
+    display: none;
+}
+
 /* Regras de Impressão (Print) */
 @media print {
+    body.exporting > *:not(#export-sheets) {
+        display: none !important;
+    }
+
+    body.exporting #export-sheets {
+        display: block !important;
+    }
+
+    body.exporting #export-sheets,
+    body.exporting #export-sheets * {
+        visibility: visible !important;
+    }
+
+    #export-sheets .export-page {
+        break-after: page;
+        page-break-after: always;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    #export-sheets .export-page:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
     body {
         background: white !important;
         color: black !important;

@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         image.src = valid ? dataUrl : '';
     }
 
-    function showOrder(order, companyName) {
+    function fillSheet(order, companyName) {
         const data = order.data || {};
         const date = data['input-data'] ? new Date(data['input-data']) : null;
         setViewText('view-company', companyName);
@@ -96,10 +96,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             photoContainer.append(image);
         }
         document.getElementById('view-photos-section').classList.toggle('hidden', !photos.length);
+    }
 
+    function showOrder(order, companyName) {
+        fillSheet(order, companyName);
         for (const section of dashboardSections()) section.classList.add('hidden');
         document.getElementById('order-viewer').classList.remove('hidden');
         window.scrollTo(0, 0);
+    }
+
+    async function exportOrders(orderIds, clientEmail, statusElement) {
+        const sheets = document.getElementById('export-sheets');
+        sheets.replaceChildren();
+        const numbers = [];
+        for (const [index, id] of orderIds.entries()) {
+            setMessage(statusElement, `Preparando ${index + 1} de ${orderIds.length}…`);
+            const { orders } = await apiRequest(`/api/orders?id=${encodeURIComponent(id)}`);
+            if (!orders.length) continue;
+            fillSheet(orders[0], companyName);
+            const page = document.getElementById('printable-sheet').cloneNode(true);
+            page.removeAttribute('id');
+            for (const element of page.querySelectorAll('[id]')) element.removeAttribute('id');
+            for (const image of page.querySelectorAll('img[src=""]')) image.remove();
+            page.classList.add('export-page');
+            sheets.append(page);
+            numbers.push(orders[0].osNumber || 'sem número');
+        }
+        if (!numbers.length) throw new Error('Nenhuma ordem encontrada.');
+
+        document.body.classList.add('exporting');
+        const cleanup = () => {
+            document.body.classList.remove('exporting');
+            sheets.replaceChildren();
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup);
+        const previousTitle = document.title;
+        document.title = `Ordens de Serviço - ${companyName}`;
+        setMessage(statusElement, 'Na janela de impressão, escolha "Salvar como PDF". Depois anexe o arquivo ao e-mail que será aberto.');
+        window.print();
+        document.title = previousTitle;
+
+        const subject = `Ordens de Serviço - ${companyName}`;
+        const body = `Olá,\n\nSegue em anexo o PDF com as ordens de serviço: ${numbers.join(', ')}.\n\nAtenciosamente,\n${companyName}`;
+        window.location.href = `mailto:${encodeURIComponent(clientEmail).replace('%40', '@')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
     function closeOrderViewer() {
@@ -307,11 +347,77 @@ document.addEventListener('DOMContentLoaded', async () => {
         filter.setAttribute('aria-label', 'Filtrar ordens por local');
         ordersHeader.append(filter);
         const orderList = makeEl('div', 'space-y-2');
-        ordersSection.append(ordersHeader, orderList);
+        const selected = new Set();
+        const exportBar = makeEl('form', 'flex flex-wrap items-center gap-2 rounded bg-slate-50 p-2');
+        const selectAllLabel = makeEl('label', 'flex items-center gap-1 text-xs');
+        const selectAll = makeEl('input');
+        selectAll.type = 'checkbox';
+        selectAllLabel.append(selectAll, document.createTextNode('Selecionar todas'));
+        const clientEmail = makeEl('input', 'form-input min-w-48 flex-1');
+        clientEmail.type = 'email';
+        clientEmail.required = true;
+        clientEmail.maxLength = 200;
+        clientEmail.placeholder = 'E-mail do cliente';
+        clientEmail.setAttribute('aria-label', 'E-mail do cliente');
+        const exportButton = makeEl('button', 'btn-primary', 'Gerar PDF e enviar por e-mail');
+        exportButton.type = 'submit';
+        const exportMessage = makeEl('p', 'min-h-5 w-full text-xs');
+        exportMessage.setAttribute('role', 'status');
+        exportBar.append(selectAllLabel, clientEmail, exportButton, exportMessage);
+        ordersSection.append(ordersHeader, exportBar, orderList);
         panel.append(locationsSection, ordersSection);
+
+        const MAX_EXPORT = 20;
+        function syncSelection() {
+            const boxes = [...orderList.querySelectorAll('input[data-order-id]')];
+            selectAll.checked = boxes.length > 0 && boxes.every(box => box.checked);
+            exportButton.textContent = selected.size
+                ? `Gerar PDF e enviar por e-mail (${selected.size})`
+                : 'Gerar PDF e enviar por e-mail';
+        }
+        selectAll.addEventListener('change', () => {
+            selected.clear();
+            for (const box of orderList.querySelectorAll('input[data-order-id]')) {
+                box.checked = selectAll.checked && selected.size < MAX_EXPORT;
+                if (box.checked) selected.add(box.dataset.orderId);
+            }
+            if (selectAll.checked && selected.size === MAX_EXPORT) {
+                setMessage(exportMessage, `Limite de ${MAX_EXPORT} ordens por PDF.`);
+            }
+            syncSelection();
+        });
+        orderList.addEventListener('change', event => {
+            const box = event.target;
+            if (!(box instanceof HTMLInputElement) || !box.dataset.orderId) return;
+            if (box.checked && selected.size >= MAX_EXPORT) {
+                box.checked = false;
+                setMessage(exportMessage, `Limite de ${MAX_EXPORT} ordens por PDF.`, true);
+                return;
+            }
+            if (box.checked) selected.add(box.dataset.orderId);
+            else selected.delete(box.dataset.orderId);
+            syncSelection();
+        });
+        exportBar.addEventListener('submit', async event => {
+            event.preventDefault();
+            if (!selected.size) {
+                setMessage(exportMessage, 'Marque ao menos uma ordem para enviar.', true);
+                return;
+            }
+            exportButton.disabled = true;
+            try {
+                await exportOrders([...selected], clientEmail.value.trim(), exportMessage);
+            } catch (error) {
+                setMessage(exportMessage, error.message || 'Não foi possível gerar o PDF.', true);
+            } finally {
+                exportButton.disabled = false;
+            }
+        });
 
         async function loadOrders() {
             orderList.textContent = 'Carregando…';
+            selected.clear();
+            syncSelection();
             try {
                 const query = new URLSearchParams({ userId: member.id });
                 if (filter.value) query.set('locationId', filter.value);
@@ -490,7 +596,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const actions = document.createElement('div');
                 actions.className = 'flex flex-wrap items-center gap-2';
                 actions.append(numberForm, openLink);
-                row.append(details, actions);
+                const pick = document.createElement('input');
+                pick.type = 'checkbox';
+                pick.dataset.orderId = order.id;
+                pick.setAttribute('aria-label', 'Selecionar para enviar ao cliente');
+                row.append(pick, details, actions);
                 return row;
     }
 
