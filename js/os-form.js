@@ -30,6 +30,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
     const historyList = document.getElementById('history-list');
     const historySearch = document.getElementById('history-search');
     const budgetItemsContainer = document.getElementById('budget-items');
+    const itemSuggestions = document.getElementById('item-suggestions');
     const message = document.getElementById('form-message');
     let orders = [];
     let activeOrderId = null;
@@ -306,7 +307,21 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         image.src = hasInk ? canvas.toDataURL() : '';
     }
 
+    function refreshItemSuggestions() {
+        const names = new Set();
+        for (const order of orders) {
+            for (const item of order.data?.budgetItems || []) {
+                const name = String(item.description || '').trim().toLocaleUpperCase('pt-BR');
+                if (name) names.add(name);
+            }
+        }
+        itemSuggestions.replaceChildren(...[...names]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+            .map(name => new Option('', name)));
+    }
+
     function updateHistory() {
+        refreshItemSuggestions();
         const search = historySearch.value.trim().toLocaleLowerCase('pt-BR');
         const matches = orders.filter(order => {
             const data = order.data;
@@ -370,6 +385,8 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         description.dataset.budgetDescription = '';
         description.value = (item.description || '').toLocaleUpperCase('pt-BR');
         description.autocapitalize = 'characters';
+        description.setAttribute('list', 'item-suggestions');
+        description.autocomplete = 'off';
         description.addEventListener('input', () => {
             const { selectionStart, selectionEnd } = description;
             description.value = description.value.toLocaleUpperCase('pt-BR');
