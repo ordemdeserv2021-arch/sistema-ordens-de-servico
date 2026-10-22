@@ -111,7 +111,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         const data = {};
         for (const id of fieldIds) data[id] = document.getElementById(id).value.trim();
         data.budgetItems = [...budgetItemsContainer.querySelectorAll('.budget-row')].map(row => ({
-            description: row.querySelector('[data-budget-description]').value.trim(),
+            description: row.querySelector('[data-budget-description]').value.trim().toLocaleUpperCase('pt-BR'),
             quantity: Number(row.querySelector('[data-budget-quantity]').value) || 0,
             unitPrice: Number(row.dataset.unitPrice) || 0
         })).filter(item => item.description);
@@ -368,7 +368,13 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         description.placeholder = 'Descrição do material/serviço';
         description.setAttribute('aria-label', 'Descrição do item');
         description.dataset.budgetDescription = '';
-        description.value = item.description || '';
+        description.value = (item.description || '').toLocaleUpperCase('pt-BR');
+        description.autocapitalize = 'characters';
+        description.addEventListener('input', () => {
+            const { selectionStart, selectionEnd } = description;
+            description.value = description.value.toLocaleUpperCase('pt-BR');
+            description.setSelectionRange(selectionStart, selectionEnd);
+        });
 
         const quantity = document.createElement('input');
         quantity.type = 'number';
