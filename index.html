@@ -183,12 +183,20 @@
                         <section class="space-y-3 border-t border-slate-200 pt-5" aria-labelledby="orcamento-heading">
                             <div class="flex items-center justify-between gap-3">
                                 <h3 id="orcamento-heading" class="font-semibold text-slate-800">Itens / materiais (opcional)</h3>
-                                <button id="btn-add-budget-item" type="button" class="btn-secondary">
-                                    <i class="fa-solid fa-plus mr-1"></i> Adicionar item
-                                </button>
+                                <div class="flex gap-2">
+                                    <button id="btn-toggle-saved-items" type="button" class="btn-secondary" aria-expanded="false" aria-controls="saved-items-panel">
+                                        <i class="fa-solid fa-list mr-1"></i> Itens salvos (<span id="saved-items-count">0</span>)
+                                    </button>
+                                    <button id="btn-add-budget-item" type="button" class="btn-secondary">
+                                        <i class="fa-solid fa-plus mr-1"></i> Adicionar item
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="saved-items-panel" class="hidden space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                <p class="text-xs text-slate-600">Toque em um item para adicioná-lo à O.S. Para guardar um novo, digite-o abaixo e use o botão de salvar da linha.</p>
+                                <div id="saved-items-list" class="max-h-60 space-y-1 overflow-y-auto"></div>
                             </div>
                             <div id="budget-items" class="space-y-2"></div>
-                            <datalist id="item-suggestions"></datalist>
                         </section>
 
                         <section class="space-y-3 border-t border-slate-200 pt-5" aria-labelledby="logistica-heading">

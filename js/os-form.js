@@ -30,7 +30,10 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
     const historyList = document.getElementById('history-list');
     const historySearch = document.getElementById('history-search');
     const budgetItemsContainer = document.getElementById('budget-items');
-    const itemSuggestions = document.getElementById('item-suggestions');
+    const savedItemsList = document.getElementById('saved-items-list');
+    const savedItemsPanel = document.getElementById('saved-items-panel');
+    const savedItemsToggle = document.getElementById('btn-toggle-saved-items');
+    let savedItems = [];
     const message = document.getElementById('form-message');
     let orders = [];
     let activeOrderId = null;
@@ -307,21 +310,66 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         image.src = hasInk ? canvas.toDataURL() : '';
     }
 
-    function refreshItemSuggestions() {
-        const names = new Set();
-        for (const order of orders) {
-            for (const item of order.data?.budgetItems || []) {
-                const name = String(item.description || '').trim().toLocaleUpperCase('pt-BR');
-                if (name) names.add(name);
-            }
+    function renderSavedItems() {
+        document.getElementById('saved-items-count').textContent = String(savedItems.length);
+        savedItemsList.replaceChildren();
+        if (!savedItems.length) {
+            const empty = document.createElement('p');
+            empty.className = 'text-sm text-slate-500';
+            empty.textContent = 'Nenhum item salvo ainda.';
+            savedItemsList.append(empty);
+            return;
         }
-        itemSuggestions.replaceChildren(...[...names]
-            .sort((a, b) => a.localeCompare(b, 'pt-BR'))
-            .map(name => new Option('', name)));
+        for (const item of savedItems) {
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2';
+            const use = document.createElement('button');
+            use.type = 'button';
+            use.className = 'btn-secondary flex-1 text-left';
+            use.textContent = item.name;
+            use.addEventListener('click', () => addBudgetItem({ description: item.name }));
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'rounded p-2 text-slate-500 hover:bg-red-50 hover:text-red-700';
+            remove.setAttribute('aria-label', `Excluir ${item.name} dos itens salvos`);
+            remove.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i>';
+            remove.addEventListener('click', async () => {
+                try {
+                    await apiRequest('/api/items', { method: 'DELETE', body: { id: item.id } });
+                    savedItems = savedItems.filter(saved => saved.id !== item.id);
+                    renderSavedItems();
+                } catch (error) {
+                    setMessage(error.message || 'Não foi possível excluir o item.', true);
+                }
+            });
+            row.append(use, remove);
+            savedItemsList.append(row);
+        }
+    }
+
+    async function loadSavedItems() {
+        try {
+            const result = await apiRequest('/api/items');
+            savedItems = Array.isArray(result.items) ? result.items : [];
+            renderSavedItems();
+        } catch (error) {
+            console.error('Não foi possível carregar os itens salvos:', error);
+        }
+    }
+
+    async function saveItemName(name) {
+        try {
+            const { item } = await apiRequest('/api/items', { method: 'POST', body: { name } });
+            savedItems = [...savedItems.filter(saved => saved.id !== item.id), item]
+                .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+            renderSavedItems();
+            setMessage(`Item "${item.name}" salvo.`);
+        } catch (error) {
+            setMessage(error.message || 'Não foi possível salvar o item.', true);
+        }
     }
 
     function updateHistory() {
-        refreshItemSuggestions();
         const search = historySearch.value.trim().toLocaleLowerCase('pt-BR');
         const matches = orders.filter(order => {
             const data = order.data;
@@ -385,7 +433,6 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         description.dataset.budgetDescription = '';
         description.value = (item.description || '').toLocaleUpperCase('pt-BR');
         description.autocapitalize = 'characters';
-        description.setAttribute('list', 'item-suggestions');
         description.autocomplete = 'off';
         description.addEventListener('input', () => {
             const { selectionStart, selectionEnd } = description;
@@ -414,11 +461,26 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
             updatePreview();
         });
 
+        const saveItemButton = document.createElement('button');
+        saveItemButton.type = 'button';
+        saveItemButton.className = 'rounded p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-700';
+        saveItemButton.setAttribute('aria-label', 'Salvar item na lista');
+        saveItemButton.title = 'Salvar item na lista';
+        saveItemButton.innerHTML = '<i class="fa-solid fa-bookmark" aria-hidden="true"></i>';
+        saveItemButton.addEventListener('click', () => {
+            const name = description.value.trim();
+            if (!name) {
+                setMessage('Digite a descrição do item antes de salvar.', true);
+                return;
+            }
+            void saveItemName(name);
+        });
+
         for (const input of [description, quantity]) {
             input.addEventListener('input', updatePreview);
         }
 
-        row.append(description, quantity, removeButton);
+        row.append(description, quantity, saveItemButton, removeButton);
         budgetItemsContainer.append(row);
         updatePreview();
     }
@@ -677,7 +739,11 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
     updateHistory();
     updatePreview();
     void loadLocations();
-    void loadRemoteOrders();
+    void loadSavedItems();
+    savedItemsToggle.addEventListener('click', () => {
+        const open = savedItemsPanel.classList.toggle('hidden') === false;
+        savedItemsToggle.setAttribute('aria-expanded', String(open));
+    });
     document.getElementById('input-photos').addEventListener('change', event => {
         void addPhotos(event.target.files).then(() => { event.target.value = ''; });
     });

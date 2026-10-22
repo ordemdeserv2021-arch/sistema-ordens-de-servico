@@ -156,6 +156,16 @@ create unique index if not exists company_locations_unique_name_idx
 create index if not exists company_locations_user_idx
     on public.company_locations (company_id, user_id);
 
+create table if not exists public.saved_items (
+    id uuid primary key default gen_random_uuid(),
+    company_id uuid not null references public.companies (id) on delete cascade,
+    user_id text not null,
+    name text not null check (char_length(name) between 1 and 160),
+    created_at timestamptz not null default now()
+);
+create unique index if not exists saved_items_unique
+    on public.saved_items (company_id, user_id, lower(name));
+
 alter table public.service_orders add column if not exists location_id uuid
     references public.company_locations (id) on delete set null;
 create index if not exists service_orders_company_user_idx

@@ -101,14 +101,14 @@ body {
 
 .budget-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 5rem auto;
+    grid-template-columns: minmax(0, 1fr) 5rem auto auto;
     gap: 0.5rem;
     align-items: center;
 }
 
 @media (max-width: 640px) {
     .budget-row {
-        grid-template-columns: minmax(0, 1fr) 4rem auto;
+        grid-template-columns: minmax(0, 1fr) 4rem auto auto;
     }
 }
 
