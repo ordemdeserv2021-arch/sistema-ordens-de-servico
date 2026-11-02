@@ -378,7 +378,7 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
 
         for (const order of matches) {
             const card = document.createElement('article');
-            card.className = 'flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm';
+            card.className = 'order-row flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm';
             const details = document.createElement('div');
             const title = document.createElement('h3');
             title.className = 'font-semibold text-slate-800';

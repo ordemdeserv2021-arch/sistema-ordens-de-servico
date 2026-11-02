@@ -204,3 +204,35 @@ body {
         margin: 10mm;
     }
 }
+
+@media screen {
+    body {
+        background: linear-gradient(160deg, #e0e7ff 0%, #f1f5f9 45%, #dbeafe 100%) fixed !important;
+    }
+
+    .rounded-xl.bg-white {
+        --accent: #3b82f6;
+        --tint: #eff6ff;
+        border-top: 4px solid var(--accent);
+        background: linear-gradient(180deg, var(--tint) 0, #fff 110px) !important;
+    }
+
+    #manager-dashboard > div:nth-child(1) { --accent: #1d4ed8; --tint: #dbeafe; }
+    #license-panel { --accent: #f59e0b; --tint: #fef3c7; }
+    #numbering-panel { --accent: #8b5cf6; --tint: #ede9fe; }
+    #invite-panel { --accent: #10b981; --tint: #d1fae5; }
+    #manager-dashboard > div:last-child { --accent: #0ea5e9; --tint: #e0f2fe; }
+    #admin-dashboard > div:nth-child(1) { --accent: #10b981; --tint: #d1fae5; }
+    #admin-dashboard > div:nth-child(2) { --accent: #3b82f6; --tint: #dbeafe; }
+    #admin-dashboard > div:nth-child(3) { --accent: #8b5cf6; --tint: #ede9fe; }
+
+    .member-card {
+        border-left: 4px solid #6366f1;
+        background: linear-gradient(180deg, #eef2ff 0, #fff 70px);
+    }
+
+    .order-row {
+        border-left: 4px solid #0ea5e9;
+        background: #f0f9ff !important;
+    }
+}

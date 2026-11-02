@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function buildMemberCard(member) {
-        const card = makeEl('article', 'rounded border border-slate-200');
+        const card = makeEl('article', 'member-card rounded border border-slate-200');
         const header = makeEl('div', 'flex flex-wrap items-center justify-between gap-3 p-3');
         const info = makeEl('div');
         const title = makeEl('p', 'font-medium');
@@ -650,7 +650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function buildOrderRow(order) {
                 const row = document.createElement('article');
-                row.className = 'flex flex-wrap items-center justify-between gap-3 rounded border border-slate-200 p-3';
+                row.className = 'order-row flex flex-wrap items-center justify-between gap-3 rounded border border-slate-200 p-3';
                 const details = document.createElement('div');
                 const title = document.createElement('p');
                 title.className = 'font-medium';
