@@ -81,6 +81,11 @@ abre em um cartão ("Gerenciar") com:
 - **Ordens do colaborador**, filtráveis por local, com "Ver ordem" (somente
   leitura) e correção manual do número. A lista do gestor não traz fotos nem
   assinaturas; elas só são carregadas ao abrir a ordem.
+- Ao preparar um PDF para envio por e-mail, toque em **Compartilhar PDF** para
+  abrir o compartilhamento nativo com o arquivo anexado em navegadores
+  compatíveis. Nos demais, o botão baixa o PDF e abre o e-mail preenchido para
+  anexar manualmente. O compartilhamento de arquivos exige HTTPS (ou
+  `localhost`) e suporte do navegador/dispositivo.
 
 O colaborador escolhe o local ao criar a O.S. (campo "Local da preventiva", só
 aparece se o gestor cadastrou locais para ele). A escolha fica travada depois de

@@ -107,6 +107,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.scrollTo(0, 0);
     }
 
+    function supportsFileSharing(file) {
+        try {
+            return typeof navigator.share === 'function'
+                && typeof navigator.canShare === 'function'
+                && navigator.canShare({ files: [file] });
+        } catch (error) {
+            console.warn('O navegador não conseguiu verificar o compartilhamento do PDF.', error);
+            return false;
+        }
+    }
+
+    function downloadPdfAndOpenEmail(delivery, statusElement) {
+        const downloadUrl = URL.createObjectURL(delivery.file);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = downloadUrl;
+        downloadLink.download = delivery.file.name;
+        downloadLink.click();
+        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 60_000);
+        setMessage(statusElement, 'PDF baixado. Anexe o arquivo à mensagem de e-mail que será aberta.');
+        window.location.href = `mailto:${encodeURIComponent(delivery.clientEmail).replace('%40', '@')}?subject=${encodeURIComponent(delivery.subject)}&body=${encodeURIComponent(delivery.body)}`;
+    }
+
     async function exportOrders(orderIds, clientEmail, statusElement) {
         const sheets = document.getElementById('export-sheets');
         sheets.replaceChildren();
@@ -126,22 +148,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (!numbers.length) throw new Error('Nenhuma ordem encontrada.');
 
-        document.body.classList.add('exporting');
-        const cleanup = () => {
-            document.body.classList.remove('exporting');
+        const pages = [...sheets.querySelectorAll('.export-page')];
+        pages.slice(0, -1).forEach(page => page.classList.add('pdf-page-break-after'));
+        const safeCompanyName = companyName.replace(/[<>:"/\\|?*\x00-\x1F]/g, '-').trim().slice(0, 100) || 'Empresa';
+        const filename = `Ordens de Serviço - ${safeCompanyName}.pdf`;
+        if (typeof window.html2pdf !== 'function') {
             sheets.replaceChildren();
-            window.removeEventListener('afterprint', cleanup);
-        };
-        window.addEventListener('afterprint', cleanup);
-        const previousTitle = document.title;
-        document.title = `Ordens de Serviço - ${companyName}`;
-        setMessage(statusElement, 'Na janela de impressão, escolha "Salvar como PDF". Depois anexe o arquivo ao e-mail que será aberto.');
-        window.print();
-        document.title = previousTitle;
+            throw new Error('O gerador de PDF não carregou. Atualize a página e tente novamente.');
+        }
 
         const subject = `Ordens de Serviço - ${companyName}`;
         const body = `Olá,\n\nSegue em anexo o PDF com as ordens de serviço: ${numbers.join(', ')}.\n\nAtenciosamente,\n${companyName}`;
-        window.location.href = `mailto:${encodeURIComponent(clientEmail).replace('%40', '@')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        let pdfBlob;
+        sheets.classList.add('pdf-rendering');
+        try {
+            await Promise.all([...sheets.querySelectorAll('img')].map(image => image.decode()));
+            setMessage(statusElement, 'Gerando PDF…');
+            pdfBlob = await window.html2pdf()
+                .set({
+                    margin: 0,
+                    filename,
+                    image: { type: 'jpeg', quality: 0.85 },
+                    html2canvas: { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css'] }
+                })
+                .from(sheets)
+                .outputPdf('blob');
+        } finally {
+            sheets.classList.remove('pdf-rendering');
+            sheets.replaceChildren();
+        }
+
+        if (!(pdfBlob instanceof Blob) || !pdfBlob.size) {
+            throw new Error('O PDF foi gerado vazio. Tente novamente.');
+        }
+
+        return {
+            file: new File([pdfBlob], filename, { type: 'application/pdf' }),
+            clientEmail,
+            subject,
+            body
+        };
     }
 
     function closeOrderViewer() {
@@ -376,23 +424,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         clientEmail.maxLength = 200;
         clientEmail.placeholder = 'E-mail do cliente';
         clientEmail.setAttribute('aria-label', 'E-mail do cliente');
-        const exportButton = makeEl('button', 'btn-primary', 'Gerar PDF e enviar por e-mail');
+        const exportButton = makeEl('button', 'btn-primary', 'Preparar PDF para envio');
         exportButton.type = 'submit';
+        const deliveryButton = makeEl('button', 'btn-secondary hidden', 'Compartilhar PDF');
+        deliveryButton.type = 'button';
         const exportMessage = makeEl('p', 'min-h-5 w-full text-xs');
         exportMessage.setAttribute('role', 'status');
-        exportBar.append(selectAllLabel, clientEmail, exportButton, exportMessage);
+        exportBar.append(selectAllLabel, clientEmail, exportButton, deliveryButton, exportMessage);
         ordersSection.append(ordersHeader, exportBar, orderList);
         panel.append(locationsSection, ordersSection);
 
         const MAX_EXPORT = 20;
+        let pendingDelivery = null;
+        function clearPreparedDelivery() {
+            pendingDelivery = null;
+            deliveryButton.hidden = true;
+        }
+
         function syncSelection() {
             const boxes = [...orderList.querySelectorAll('input[data-order-id]')];
             selectAll.checked = boxes.length > 0 && boxes.every(box => box.checked);
             exportButton.textContent = selected.size
-                ? `Gerar PDF e enviar por e-mail (${selected.size})`
-                : 'Gerar PDF e enviar por e-mail';
+                ? `Preparar PDF para envio (${selected.size})`
+                : 'Preparar PDF para envio';
         }
         selectAll.addEventListener('change', () => {
+            clearPreparedDelivery();
             selected.clear();
             for (const box of orderList.querySelectorAll('input[data-order-id]')) {
                 box.checked = selectAll.checked && selected.size < MAX_EXPORT;
@@ -406,6 +463,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         orderList.addEventListener('change', event => {
             const box = event.target;
             if (!(box instanceof HTMLInputElement) || !box.dataset.orderId) return;
+            clearPreparedDelivery();
             if (box.checked && selected.size >= MAX_EXPORT) {
                 box.checked = false;
                 setMessage(exportMessage, `Limite de ${MAX_EXPORT} ordens por PDF.`, true);
@@ -415,6 +473,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             else selected.delete(box.dataset.orderId);
             syncSelection();
         });
+        clientEmail.addEventListener('input', clearPreparedDelivery);
         exportBar.addEventListener('submit', async event => {
             event.preventDefault();
             if (!selected.size) {
@@ -422,17 +481,57 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             exportButton.disabled = true;
+            clearPreparedDelivery();
             try {
-                await exportOrders([...selected], clientEmail.value.trim(), exportMessage);
+                pendingDelivery = await exportOrders([...selected], clientEmail.value.trim(), exportMessage);
+                const canShareFile = supportsFileSharing(pendingDelivery.file);
+                deliveryButton.textContent = canShareFile
+                    ? 'Compartilhar PDF'
+                    : 'Baixar PDF e abrir e-mail';
+                deliveryButton.hidden = false;
+                setMessage(exportMessage, canShareFile
+                    ? 'PDF pronto. Toque em “Compartilhar PDF” e escolha o aplicativo de e-mail.'
+                    : 'PDF pronto. Toque no botão para baixar o arquivo e abrir o e-mail.');
             } catch (error) {
                 setMessage(exportMessage, error.message || 'Não foi possível gerar o PDF.', true);
             } finally {
                 exportButton.disabled = false;
             }
         });
+        deliveryButton.addEventListener('click', async () => {
+            if (!pendingDelivery) return;
+            deliveryButton.disabled = true;
+            try {
+                if (!supportsFileSharing(pendingDelivery.file)) {
+                    downloadPdfAndOpenEmail(pendingDelivery, exportMessage);
+                    clearPreparedDelivery();
+                    return;
+                }
+
+                await navigator.share({
+                    files: [pendingDelivery.file],
+                    title: pendingDelivery.subject,
+                    text: pendingDelivery.body
+                });
+                setMessage(exportMessage, 'Compartilhamento concluído.');
+                pendingDelivery = null;
+                deliveryButton.hidden = true;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    setMessage(exportMessage, 'Compartilhamento cancelado. O PDF continua pronto para tentar novamente.');
+                    return;
+                }
+                console.warn('O compartilhamento do PDF falhou; usando o envio alternativo.', error);
+                downloadPdfAndOpenEmail(pendingDelivery, exportMessage);
+                clearPreparedDelivery();
+            } finally {
+                deliveryButton.disabled = false;
+            }
+        });
 
         async function loadOrders() {
             orderList.textContent = 'Carregando…';
+            clearPreparedDelivery();
             selected.clear();
             syncSelection();
             try {

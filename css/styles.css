@@ -116,6 +116,25 @@ body {
     display: none;
 }
 
+#export-sheets.pdf-rendering {
+    position: fixed;
+    top: 0;
+    left: -10000px;
+    display: block;
+    width: 210mm;
+    background: white;
+}
+
+#export-sheets.pdf-rendering .export-page {
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+#export-sheets.pdf-rendering .pdf-page-break-after {
+    break-after: page;
+    page-break-after: always;
+}
+
 /* Regras de Impressão (Print) */
 @media print {
     body.exporting > *:not(#export-sheets) {
