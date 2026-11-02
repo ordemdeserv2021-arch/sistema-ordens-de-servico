@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar senha - Sistema de O.S.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 flex items-center justify-center p-4">
+    <main class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200">
+        <div class="text-center mb-6">
+            <i class="fa-solid fa-shield-halved text-4xl text-blue-600 mb-2" aria-hidden="true"></i>
+            <h1 class="text-2xl font-bold text-gray-800">Recuperar senha</h1>
+            <p class="text-xs text-gray-500">Enviaremos um código para o e-mail da sua conta</p>
+        </div>
+
+        <form id="reset-request-form" class="space-y-4">
+            <div>
+                <label for="reset-email" class="block text-xs font-semibold text-gray-600 uppercase mb-1">E-mail</label>
+                <input type="email" id="reset-email" autocomplete="email" required
+                    class="w-full text-sm p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="seuemail@empresa.com">
+            </div>
+            <button type="submit" id="btn-send-reset-code"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
+                Enviar código
+            </button>
+        </form>
+
+        <form id="reset-password-form" class="hidden space-y-4">
+            <p id="reset-email-label" class="text-sm text-gray-600"></p>
+            <div>
+                <label for="reset-otp" class="block text-xs font-semibold text-gray-600 uppercase mb-1">Código de verificação</label>
+                <input type="text" id="reset-otp" inputmode="numeric" autocomplete="one-time-code"
+                    pattern="[0-9]{6}" maxlength="6" required
+                    class="w-full text-sm p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Digite o código de 6 dígitos">
+            </div>
+            <div>
+                <label for="new-password" class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nova senha</label>
+                <input type="password" id="new-password" autocomplete="new-password" minlength="8" required
+                    class="w-full text-sm p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Pelo menos 8 caracteres">
+            </div>
+            <div>
+                <label for="confirm-password" class="block text-xs font-semibold text-gray-600 uppercase mb-1">Confirmar nova senha</label>
+                <input type="password" id="confirm-password" autocomplete="new-password" minlength="8" required
+                    class="w-full text-sm p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Digite a senha novamente">
+            </div>
+            <button type="submit" id="btn-reset-password"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
+                Redefinir senha
+            </button>
+            <button type="button" id="btn-resend-reset-code"
+                class="w-full text-sm text-blue-700 hover:underline">Enviar outro código</button>
+        </form>
+
+        <p id="reset-message" class="mt-4 min-h-5 text-sm" role="status" aria-live="polite"></p>
+        <a href="index.html" class="mt-4 block text-center text-sm text-blue-700 hover:underline">Voltar ao login</a>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script type="module" src="js/password-reset.js"></script>
+</body>
+</html>

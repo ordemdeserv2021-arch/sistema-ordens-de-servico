@@ -64,7 +64,7 @@ async function parseBody(req) {
 
 function getPublicFile(pathname) {
     if (pathname === '/') return resolve(root, 'index.html');
-    if (!['/index.html', '/gestor.html', '/admin.html'].includes(pathname)
+    if (!['/index.html', '/gestor.html', '/admin.html', '/redefinir-senha.html'].includes(pathname)
         && !pathname.startsWith('/css/')
         && !pathname.startsWith('/js/')) {
         return null;

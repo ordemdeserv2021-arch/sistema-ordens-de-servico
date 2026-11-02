@@ -74,6 +74,26 @@ async function verifyEmailCode(email, otp) {
     return result.data;
 }
 
+async function requestPasswordReset(email) {
+    const result = await getAuthClient().emailOtp.requestPasswordReset({ email });
+    if (result.error) {
+        console.error('Erro ao solicitar redefinição de senha:', result.error);
+        throw result.error;
+    }
+
+    return result.data;
+}
+
+async function resetPassword(email, otp, password) {
+    const result = await getAuthClient().emailOtp.resetPassword({ email, otp, password });
+    if (result.error) {
+        console.error('Erro ao redefinir a senha:', result.error);
+        throw result.error;
+    }
+
+    return result.data;
+}
+
 async function getCurrentSession() {
     const result = await getAuthClient().getSession();
     if (result.error) {
@@ -160,8 +180,7 @@ async function handleLogout() {
             return;
         }
     }
-    document.getElementById('app-container').classList.add('hidden');
-    document.getElementById('auth-screen').classList.remove('hidden');
+    window.location.replace(window.location.pathname);
 }
 
 async function signOut() {
@@ -182,6 +201,8 @@ export {
     handleSignup,
     initNeonAuth,
     signOut,
+    requestPasswordReset,
+    resetPassword,
     sendEmailVerificationCode,
     verifyEmailCode
 };
