@@ -426,8 +426,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         clientEmail.setAttribute('aria-label', 'E-mail do cliente');
         const exportButton = makeEl('button', 'btn-primary', 'Preparar PDF para envio');
         exportButton.type = 'submit';
-        const deliveryButton = makeEl('button', 'btn-secondary hidden', 'Compartilhar PDF');
+        const deliveryButton = makeEl('button',         'btn-secondary', 'Compartilhar PDF');
         deliveryButton.type = 'button';
+                deliveryButton.hidden = true;
         const exportMessage = makeEl('p', 'min-h-5 w-full text-xs');
         exportMessage.setAttribute('role', 'status');
         exportBar.append(selectAllLabel, clientEmail, exportButton, deliveryButton, exportMessage);
