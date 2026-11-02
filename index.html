@@ -183,7 +183,7 @@
 
                         <section class="space-y-3 border-t border-slate-200 pt-5" aria-labelledby="orcamento-heading">
                             <div class="flex items-center justify-between gap-3">
-                                <h3 id="orcamento-heading" class="font-semibold text-slate-800">Itens / materiais (opcional)</h3>
+                                <h3 id="orcamento-heading" class="font-semibold text-slate-800">Orçamento — itens e materiais (opcional)</h3>
                                 <div class="flex gap-2">
                                     <button id="btn-toggle-saved-items" type="button" class="btn-secondary" aria-expanded="false" aria-controls="saved-items-panel">
                                         <i class="fa-solid fa-list mr-1"></i> Itens salvos (<span id="saved-items-count">0</span>)
@@ -193,6 +193,9 @@
                                     </button>
                                 </div>
                             </div>
+                            <p class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                                Área exclusiva para orçamentos. Preencha estes campos somente quando a O.S. for um orçamento.
+                            </p>
                             <div id="saved-items-panel" class="hidden space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
                                 <p class="text-xs text-slate-600">Toque em um item para adicioná-lo à O.S. Para guardar um novo, digite-o abaixo e use o marcador da linha. A lixeira da linha remove o item apenas desta O.S.</p>
                                 <div id="saved-items-list" class="max-h-60 space-y-1 overflow-y-auto"></div>
@@ -201,7 +204,7 @@
                         </section>
 
                         <section class="space-y-3 border-t border-slate-200 pt-5" aria-labelledby="logistica-heading">
-                            <h3 id="logistica-heading" class="font-semibold text-slate-800">Logística (opcional)</h3>
+                            <h3 id="logistica-heading" class="font-semibold text-slate-800">Logística do orçamento (opcional)</h3>
                             <div>
                                 <label for="input-logistica-dias" class="form-label">Dias para execução da obra</label>
                                 <input id="input-logistica-dias" type="text" maxlength="120" class="form-input" placeholder="Ex.: 5 dias úteis, de 10/11 a 14/11">
@@ -273,14 +276,14 @@
                         <div class="mt-4 space-y-3 border-t border-slate-300 pt-3 text-xs">
                             <section><h2 class="font-bold">Equipamentos</h2><p id="prev-equipamentos" class="mt-1 whitespace-pre-wrap">—</p></section>
                             <section><h2 class="font-bold">Diagnóstico / solicitação</h2><p id="prev-diagnostico" class="mt-1 whitespace-pre-wrap">—</p></section>
-                            <section><h2 class="font-bold">Procedimentos realizados</h2><p id="prev-procedimentos" class="mt-1 whitespace-pre-wrap">—</p></section>
-                            <section><h2 class="font-bold">Itens / materiais</h2><div id="prev-budget-items" class="mt-1"></div></section>
+                            <section><h2 class="font-bold">Orçamento — itens e materiais</h2><div id="prev-budget-items" class="mt-1"></div></section>
                             <section id="prev-logistica-section" class="hidden">
-                                <h2 class="font-bold">Logística</h2>
+                                <h2 class="font-bold">Logística do orçamento</h2>
                                 <p class="mt-1"><strong>Dias para execução:</strong> <span id="prev-logistica-dias">—</span></p>
                                 <p class="mt-1"><strong>Insumos:</strong> <span id="prev-logistica-insumos" class="whitespace-pre-wrap">—</span></p>
                                 <p class="mt-1"><strong>Ferramentas:</strong> <span id="prev-logistica-ferramentas" class="whitespace-pre-wrap">—</span></p>
                             </section>
+                            <section><h2 class="font-bold">Ações executadas / procedimentos</h2><p id="prev-procedimentos" class="mt-1 whitespace-pre-wrap">—</p></section>
                         <section id="prev-photos-section" class="hidden"><h2 class="font-bold">Fotos do serviço</h2><div id="prev-photos" class="mt-1 grid grid-cols-3 gap-2"></div></section>
                         </div>
                         <div class="mt-8 grid grid-cols-2 gap-8 text-center text-xs">

@@ -215,13 +215,13 @@ export function initServiceOrderForm(userId, companyId, requestedOrderId = '') {
         add('Serviço', data['input-titulo']);
         add('Equipamentos', data['input-equipamentos']);
         add('Diagnóstico', data['input-diagnostico']);
-        add('Procedimentos', data['input-procedimentos']);
         if (data.budgetItems.length) {
-            add('Itens', data.budgetItems.map(item => `${item.description} (${item.quantity})`).join('; '));
+            add('Orçamento — itens e materiais', data.budgetItems.map(item => `${item.description} (${item.quantity})`).join('; '));
         }
-        add('Dias para execução', data['input-logistica-dias']);
-        add('Insumos', data['input-logistica-insumos']);
-        add('Ferramentas', data['input-logistica-ferramentas']);
+        add('Orçamento — dias para execução', data['input-logistica-dias']);
+        add('Orçamento — insumos', data['input-logistica-insumos']);
+        add('Orçamento — ferramentas', data['input-logistica-ferramentas']);
+        add('Ações executadas / procedimentos', data['input-procedimentos']);
         return lines.join('\n');
     }
 
