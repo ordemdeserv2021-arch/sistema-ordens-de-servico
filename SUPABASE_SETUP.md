@@ -29,11 +29,11 @@ cliente.
    inicia o teste de 30 dias. Colaboradores não fazem cadastro aberto: entram
    pelo convite enviado pelo gestor. A tela principal só é liberada após a
    confirmação do e-mail e a validação do vínculo com uma empresa.
-8. Na tela de login, **Esqueci minha senha** abre `redefinir-senha.html`. O
-   usuário informa o e-mail, recebe um código de recuperação e define uma nova
-   senha com pelo menos 8 caracteres. O envio usa o OTP de redefinição do
-   Better Auth; confirme que o envio de e-mail está ativo nas configurações do
-   Neon Auth.
+8. Nas telas de login dos colaboradores e do gestor, **Esqueci minha senha**
+   abre `redefinir-senha.html`. O usuário informa o e-mail, recebe um código
+   de recuperação e define uma nova senha com pelo menos 8 caracteres. O envio
+   usa o OTP de redefinição do Better Auth; confirme que o envio de e-mail está
+   ativo nas configurações do Neon Auth.
 
 O cliente é carregado pelo módulo `@neondatabase/neon-js` via CDN. O navegador
 precisa de acesso à internet e o domínio da aplicação deve estar autorizado na
